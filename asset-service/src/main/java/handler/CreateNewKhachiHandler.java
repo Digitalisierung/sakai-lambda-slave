@@ -20,6 +20,7 @@ public class CreateNewKhachiHandler implements RequestHandler<APIGatewayProxyReq
     private CreateKhachiDao transactionDao;
     public String handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         String body = input.getBody();
+        String str = "Hello from Lambda!";
         try {
             Map map = Utility.objectMapper.readValue(body, Map.class);
             PutItemRequest request = PutItemRequest.builder().build();

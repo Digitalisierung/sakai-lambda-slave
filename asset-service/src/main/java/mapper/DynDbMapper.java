@@ -9,6 +9,7 @@ import java.util.Map;
 public interface DynDbMapper {
     DynDbMapper MAPPER = Mappers.getMapper(DynDbMapper.class);
 
+    // Map<String, AttributeValue> concertToDynDbMap(Concert concert);
     Map<String, AttributeValue> convertToDynDbMap(Map<String, Object> object);
 
     default AttributeValue map(Object value) {
