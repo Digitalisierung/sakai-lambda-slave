@@ -1,2 +1,2 @@
 # sakai-lambda-slave
-Backend.
+Backend service for sakai-ng-master.
