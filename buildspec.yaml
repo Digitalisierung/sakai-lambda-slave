@@ -1,0 +1,33 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+
+  pre_build:
+    commands:
+      - echo Starting pre-build phase...
+      - echo Nothing to do in the pre_build phase...
+      - mvn -v
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Compiling and packaging the project...
+      # Führt den Build vom Root aus durch.
+      # Da du den Shade-Plugin nutzt, wird hier das "Fat Jar" erstellt.
+      - mvn clean package
+
+  post_build:
+    commands:
+      - echo Build completed on `date`
+
+artifacts:
+  files:
+    # Hier geben wir an, wo die fertige JAR liegt.
+    # Da 'asset-service' ein Untermodul ist, liegt es in dessen target-Ordner.
+    - asset-service/target/asset-service-*.jar
+
+  # 'yes' sorgt dafür, dass die Ordnerstruktur (asset-service/target/) im S3 entfernt wird
+  # und nur die reine Datei dort landet.
+  discard-paths: yes
