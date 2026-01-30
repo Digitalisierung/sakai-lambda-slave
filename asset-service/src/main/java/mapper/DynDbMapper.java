@@ -1,13 +1,13 @@
 package mapper;
 
-import org.mapstruct.factory.Mappers;
+//import org.mapstruct.factory.Mappers;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Map;
 
 // @Mapper(componentModel = "cdi", injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface DynDbMapper {
-    DynDbMapper MAPPER = Mappers.getMapper(DynDbMapper.class);
+    //DynDbMapper MAPPER = Mappers.getMapper(DynDbMapper.class);
 
     // Map<String, AttributeValue> concertToDynDbMap(Concert concert);
     Map<String, AttributeValue> convertToDynDbMap(Map<String, Object> object);

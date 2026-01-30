@@ -2,10 +2,8 @@ package builder;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
-import mapper.DynDbMapper;
+import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 
 import java.util.Map;
 
@@ -17,11 +15,11 @@ public class RequestBuilder {
     }
 
     public PutItemResponse buildItemResponse(Map jsonMap){
-        Map<String, AttributeValue> dynDbMap = DynDbMapper.MAPPER.convertToDynDbMap(jsonMap);
+        //Map<String, AttributeValue> dynDbMap = DynDbMapper.MAPPER.convertToDynDbMap(jsonMap);
 
         final PutItemRequest putItemRequest = PutItemRequest.builder()
                 .tableName(TABLE_NAME)
-                .item(dynDbMap)
+                //.item(dynDbMap)
                 .build();
 
         final DynamoDbClient ddbClient = DynamoDbClient.builder()
