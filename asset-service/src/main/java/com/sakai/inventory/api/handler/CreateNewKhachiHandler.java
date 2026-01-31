@@ -1,20 +1,15 @@
-package handler;
+package com.sakai.inventory.api.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.mapstruct.ap.shaded.freemarker.core.Environment;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import dao.CreateKhachiDao;
-import mapper.DynDbMapper;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import utility.Utility;
 
-import java.util.List;
 import java.util.Map;
-
-import static mapper.DynDbMapper.MAPPER;
 
 public class CreateNewKhachiHandler implements RequestHandler<APIGatewayProxyRequestEvent, String> {
     private CreateKhachiDao transactionDao;

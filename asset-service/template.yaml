@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless application template for asset service
+Globals:
+  Function:
+    Timeout: 20
+    MemorySize: 1024
+
+Resources:
+  GetCatalogsHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.GetCatalogsHandler::handleRequest
+      Runtime: java21
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Events:
+        ApiUnit:
+          Type: Api
+          Properties:
+            Path: /catalogs
+            Method: get
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: 'asset-service-${AWS::StackName}'
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
+
+Outputs:
+  ApiUnitApi:
+    Description: API Gateway endpoint URL for Prod stage for GetCatalogs function.
+    Value: !Sub 'https://${ApiUnitApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/catalogs'
+  GetCatalogsHandler:
+    Description: GetCatalogs Lambda Function ARN
+    Value: !GetAtt GetCatalogsHandler.Arn
+  GetCatalogsHandlerIamRole:
+    Description: Implicit IAM Role created for GetCatalogsHandler function.
+    Value: !GetAtt GetCatalogsHandlerRole.Arn

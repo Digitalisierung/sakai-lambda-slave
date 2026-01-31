@@ -1,15 +1,15 @@
 ########################################
-# Maven
+# Build
 ########################################
-/target/
 /build/
-/out/
 /bin/
 /classes/
 
-# ----------------------------------------------------------------------
+########################################
 # Maven
-# ----------------------------------------------------------------------
+########################################
+/target/
+**/target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -23,7 +23,6 @@ buildNumber.properties
 # Java
 ########################################
 *.class
-*.log
 *.jar
 *.war
 
@@ -72,7 +71,7 @@ Desktop.ini
 /jacoco/
 
 ########################################
-# Temporary / Backup Files
+# Temporary / Backup / Log Files
 ########################################
 *.swp
 *.swo
@@ -81,3 +80,22 @@ Desktop.ini
 *.tmp
 *.lst
 pom.properties
+*.log
+
+#######################################
+# Lambda
+#######################################
+/events/
+/asset-service/.aws-sam/
+*.zip
+packaged.yaml
+samconfig.toml
+
+#######################################
+# Credentials
+#######################################
+.env
+*.pem
+*.key
+credentials.json
+**/secrets/
