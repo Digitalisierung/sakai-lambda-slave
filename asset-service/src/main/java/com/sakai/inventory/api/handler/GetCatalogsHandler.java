@@ -31,6 +31,9 @@ public class GetCatalogsHandler implements RequestHandler<APIGatewayProxyRequest
         response.setBody(body);
         response.setStatusCode(200);
 
+        LOGGER.info("GetCatalogsHandler request successful");
+        LOGGER.info("GetCatalogsHandler response: {}", response.getBody());
+
         return response;
     }
 }
