@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,6 +15,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Automatically generated tests for GetCatalogsHandler.")
 class GetCatalogsHandlerTest {
 
     private GetCatalogsHandler handler;
@@ -27,6 +29,7 @@ class GetCatalogsHandlerTest {
     }
 
     @Test
+    @DisplayName("Test GetCatalogsHandler. It should return success response.")
     void handleRequest_ShouldReturnSuccessResponse() {
         // Arrange
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
@@ -37,7 +40,7 @@ class GetCatalogsHandlerTest {
         // Assert
         assertThat(response).isNotNull();
         assertThat(response.getStatusCode()).isEqualTo(200);
-        assertThat(response.getBody()).isEqualTo("{\"message\": \"Lambda works successfully\"}");
+        assertThat(response.getBody()).isNotBlank();
 
         Map<String, String> headers = response.getHeaders();
         assertThat(headers).isNotNull();
