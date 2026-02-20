@@ -36,6 +36,33 @@ Resources:
         Ref: ApplicationResourceGroup
       AutoConfigurationEnabled: 'true'
 
+  #########################################
+  # DynamoDB Table
+  #########################################
+  InventoryTable:
+    Type: AWS::DynamoDB::Table
+    Description: Inventory table with articles und catalogs (SAKAI Project).
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: partitionKey
+          AttributeType: S
+        - AttributeName: sortKey
+          AttributeType: S
+        - AttributeName: SKU
+          AttributeType: S
+      KeySchema:
+        - AttributeName: partitionKey
+          KeyType: HASH
+        - AttributeName: sortKey
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: SKU-index
+          KeySchema:
+            - AttributeName: SKU
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
 Outputs:
   ApiUnitApi:
     Description: API Gateway endpoint URL for Prod stage for GetCatalogs function.
