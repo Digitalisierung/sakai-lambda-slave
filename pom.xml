@@ -9,6 +9,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>asset-service</module>
+        <module>docs</module>
     </modules>
 
     <properties>

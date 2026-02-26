@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack:latest
+    ports:
+      # API Gateway
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      # Services, die gestartet werden sollen
+      - SERVICES=s3,sqs,dynamodb,lambda,apigateway,cloudformation,cloudwatch,iam,sts,ssm,events,ses,sns,stepfunctions,logs
+
+      # Persistenz aktivieren (optional)
+      - PERSISTENCE=1
+      - DATA_DIR=/var/lib/localstack/data
+
+      # Für Lambda Funktionen
+      - LAMBDA_EXECUTOR=docker-reuse
+      # - LAMBDA_REMOTE_DOCKER=true
+      - LAMBDA_DOCKER_NETWORK=localstack_default
+
+      # Edge Port (wichtig für alle Services)
+      - EDGE_PORT=4566
+
+      # Debug Modus (optional)
+      - DEBUG=1
+
+      # AWS Credentials für lokale Entwicklung
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=eu-central-1
+    volumes:
+      # Für persistente Daten
+      - localstack_data:/var/lib/localstack
+
+      # Docker Socket für Lambda-Funktionen
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - localstack-network
+volumes:
+  localstack_data:
+    driver: local
+networks:
+  localstack-network:
+    driver: bridge
