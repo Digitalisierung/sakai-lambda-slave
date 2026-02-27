@@ -17,10 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GetCatalogsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private static final Logger LOGGER = LogManager.getLogger(GetCatalogsHandler.class);
+public class ListArticlesHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+    private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
 
-    public GetCatalogsHandler() {
+    public ListArticlesHandler() {
         LOGGER.info("GetCatalogsHandler constructor");
     }
 
