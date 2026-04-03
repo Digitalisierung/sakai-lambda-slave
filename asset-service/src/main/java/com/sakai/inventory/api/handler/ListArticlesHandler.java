@@ -30,7 +30,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         headers.put("Content-Type", "application/json");
         headers.put("X-Custom-Header", "application/json");
 
-        String body = String.format("{\"message\": \"Lambda works successfully\"}");
+        // String body = String.format("{\"message\": \"Lambda works successfully\"}");
         List<Article> articles = fetchArticles();
         List<ArticleDTO> articleDTOs = mapArticles(articles);
 
