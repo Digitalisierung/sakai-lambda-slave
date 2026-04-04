@@ -24,6 +24,7 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
+      - ls -l target/
 
 artifacts:
   files:

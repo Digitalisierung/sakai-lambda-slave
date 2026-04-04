@@ -44,12 +44,13 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         } catch (JsonProcessingException e) {
             response.setStatusCode(500);
             response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
+            LOGGER.error(e.getMessage(), e);
         } catch (Exception e) {
             response.setStatusCode(500);
             response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
+            LOGGER.error(e.getMessage(), e);
         }
 
-        LOGGER.info("GetCatalogsHandler response: {}", response.getBody());
 
         return response;
     }
