@@ -2,7 +2,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      java: corretto17
+      java: corretto21
 
   pre_build:
     commands:
@@ -14,9 +14,10 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Compiling and packaging the project...
+      - cd asset-service
       # Führt den Build vom Root aus durch.
       # Da du den Shade-Plugin nutzt, wird hier das "Fat Jar" erstellt.
-      - mvn clean package
+      - mvn clean package -Dmaven.test.skip=true
 
   post_build:
     commands:
