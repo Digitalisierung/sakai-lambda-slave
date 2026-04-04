@@ -17,6 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The ListArticlesHandler class implements the AWS Lambda RequestHandler interface to process a
+ * request and provide a response for listing articles. It fetches, maps, and returns article data in JSON format.
+ */
 public class ListArticlesHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
 
