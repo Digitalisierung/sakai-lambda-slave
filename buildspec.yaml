@@ -8,6 +8,8 @@ phases:
     commands:
       - echo Starting pre-build phase...
       - echo Nothing to do in the pre_build phase...
+      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      - export PATH=$JAVA_HOME/bin:$PATH
       - mvn -v
 
   build:
