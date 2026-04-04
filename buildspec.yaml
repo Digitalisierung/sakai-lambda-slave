@@ -29,7 +29,7 @@ artifacts:
   files:
     # Hier geben wir an, wo die fertige JAR liegt.
     # Da 'asset-service' ein Untermodul ist, liegt es in dessen target-Ordner.
-    - asset-service/target/asset-service-*.jar
+    - asset-service/target/asset-service-lambda.jar
 
   # 'yes' sorgt dafür, dass die Ordnerstruktur (asset-service/target/) im S3 entfernt wird
   # und nur die reine Datei dort landet.
