@@ -30,7 +30,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         headers.put("Content-Type", "application/json");
         headers.put("X-Custom-Header", "application/json");
 
-        // String body = String.format("{\"message\": \"Lambda works successfully\"}");
+        String body = String.format("{\"message\": \"Lambda works successfully\"}");
         List<Article> articles = fetchArticles();
         List<ArticleDTO> articleDTOs = mapArticles(articles);
 
@@ -43,7 +43,10 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
             LOGGER.info("GetCatalogsHandler request successful");
         } catch (JsonProcessingException e) {
             response.setStatusCode(500);
-            response.setBody("{}");
+            response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
+        } catch (Exception e) {
+            response.setStatusCode(500);
+            response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
         }
 
         LOGGER.info("GetCatalogsHandler response: {}", response.getBody());
