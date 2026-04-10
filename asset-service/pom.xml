@@ -115,6 +115,11 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <finalName>asset-service-lambda</finalName>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

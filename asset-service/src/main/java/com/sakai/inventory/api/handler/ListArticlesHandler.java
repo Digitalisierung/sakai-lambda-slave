@@ -17,10 +17,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GetCatalogsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private static final Logger LOGGER = LogManager.getLogger(GetCatalogsHandler.class);
+/**
+ * The ListArticlesHandler class implements the AWS Lambda RequestHandler interface to process a
+ * request and provide a response for listing articles. It fetches, maps, and returns article data in JSON format.
+ */
+public class ListArticlesHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+    private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
 
-    public GetCatalogsHandler() {
+    public ListArticlesHandler() {
         LOGGER.info("GetCatalogsHandler constructor");
     }
 
@@ -30,7 +34,7 @@ public class GetCatalogsHandler implements RequestHandler<APIGatewayProxyRequest
         headers.put("Content-Type", "application/json");
         headers.put("X-Custom-Header", "application/json");
 
-        String body = String.format("{\"message\": \"Lambda works successfully\"}");
+        // String body = String.format("{\"message\": \"Lambda works successfully\"}");
         List<Article> articles = fetchArticles();
         List<ArticleDTO> articleDTOs = mapArticles(articles);
 
@@ -43,10 +47,14 @@ public class GetCatalogsHandler implements RequestHandler<APIGatewayProxyRequest
             LOGGER.info("GetCatalogsHandler request successful");
         } catch (JsonProcessingException e) {
             response.setStatusCode(500);
-            response.setBody("{}");
+            response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
+            LOGGER.error(e.getMessage(), e);
+        } catch (Exception e) {
+            response.setStatusCode(500);
+            response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
+            LOGGER.error(e.getMessage(), e);
         }
 
-        LOGGER.info("GetCatalogsHandler response: {}", response.getBody());
 
         return response;
     }

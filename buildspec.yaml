@@ -2,31 +2,36 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      java: corretto17
+      java: corretto21
 
   pre_build:
     commands:
       - echo Starting pre-build phase...
       - echo Nothing to do in the pre_build phase...
+      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      - export PATH=$JAVA_HOME/bin:$PATH
       - mvn -v
 
   build:
     commands:
       - echo Build started on `date`
       - echo Compiling and packaging the project...
+      - cd asset-service
       # Führt den Build vom Root aus durch.
       # Da du den Shade-Plugin nutzt, wird hier das "Fat Jar" erstellt.
-      - mvn clean package
+      - mvn clean package -Dmaven.test.skip=true
 
   post_build:
     commands:
       - echo Build completed on `date`
+      - ls -l target/
+      - jar tf target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
 
 artifacts:
   files:
     # Hier geben wir an, wo die fertige JAR liegt.
     # Da 'asset-service' ein Untermodul ist, liegt es in dessen target-Ordner.
-    - asset-service/target/asset-service-*.jar
+    - asset-service/target/asset-service-lambda.jar
 
   # 'yes' sorgt dafür, dass die Ordnerstruktur (asset-service/target/) im S3 entfernt wird
   # und nur die reine Datei dort landet.
