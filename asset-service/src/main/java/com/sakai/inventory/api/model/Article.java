@@ -1,113 +1,58 @@
 package com.sakai.inventory.api.model;
 
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
-
-import java.util.Map;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
 @DynamoDbBean
 public class Article {
-    private String articleId;
-    private String sku;
-    private String name;
-    private String description;
-    // TODO: muss später entfernt werden. Keine Preise, da kein Handel. Den Wert bestimmt Gutachten.
-    private String price;
-    private Long inventory;
-    private String imageUrl;
-    private String state;
-    private Boolean isFeatured;
-    private String catalogId; // Fremdschlüssel-Referenz.
 
+    //  = "ARTICLES"
+    private String partitionKey;
+    // = "ARTiCLES#SKU-120#40eb8f95-852b-40f6-8fa4-dc744132db4a"
+    private String sortKey;
+    private String catalogId;
+    //  = "2026-02-05T14:30:00Z"
     private String createdAt;
+    private String description;
+    // = "http://s3.img01.png"
+    private String imageUrl;
+    private Integer inventory;
+    private Boolean isFeatured;
+    //  = "iPhone 15"
+    private String name;
+    private Integer price;
+    // = "SKU-120"
+    private String sku;
+    //  = "AVAILABLE"
+    private String state;
+    //  = "2026-02-05T14:30:00Z"
     private String updatedAt;
 
-    // Die "Magie" für dynamische Felder.
-    private Map<String, DynamicFieldValue> dynamicFields;
 
-    public Article(String name, String sku) {
-        this.name = name;
-        this.sku = sku;
+    public Article() {
+        super();
     }
 
     @DynamoDbPartitionKey
-    public String getArticleId() {
-        return articleId;
+    @DynamoDbAttribute("partitionKey")
+    public String getPartitionKey() {
+        return partitionKey;
     }
 
-    public void setArticleId(String articleId) {
-        this.articleId = articleId;
+    public void setPartitionKey(String partitionKey) {
+        this.partitionKey = partitionKey;
     }
 
-    @DynamoDbSecondaryPartitionKey(indexNames = {"gsi_sku_lookup"})
-    public String getSku() {
-        return sku;
+    @DynamoDbSortKey
+    @DynamoDbAttribute("sortKey")
+    public String getSortKey() {
+        return sortKey;
     }
 
-    public void setSku(String sku) {
-        this.sku = sku;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getPrice() {
-        return price;
-    }
-
-    public void setPrice(String price) {
-        this.price = price;
-    }
-
-    public Long getInventory() {
-        return inventory;
-    }
-
-    public void setInventory(Long inventory) {
-        this.inventory = inventory;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
-    }
-
-    public Boolean getFeatured() {
-        return isFeatured;
-    }
-
-    public void setFeatured(Boolean featured) {
-        isFeatured = featured;
-    }
-
-    @DynamoDbSecondaryPartitionKey(indexNames = {"gsi_catalog_lookup"})
-    public String getCatalogId() {
-        return catalogId;
+    public void setSortKey(String sortKey) {
+        this.sortKey = sortKey;
     }
 
     public void setCatalogId(String catalogId) {
@@ -122,6 +67,66 @@ public class Article {
         this.createdAt = createdAt;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public Integer getInventory() {
+        return inventory;
+    }
+
+    public void setInventory(Integer inventory) {
+        this.inventory = inventory;
+    }
+
+    public Boolean getFeatured() {
+        return isFeatured;
+    }
+
+    public void setFeatured(Boolean featured) {
+        isFeatured = featured;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getPrice() {
+        return price;
+    }
+
+    public void setPrice(Integer price) {
+        this.price = price;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
     public String getUpdatedAt() {
         return updatedAt;
     }
@@ -130,27 +135,37 @@ public class Article {
         this.updatedAt = updatedAt;
     }
 
-    public Map<String, DynamicFieldValue> getDynamicFields() {
-        return dynamicFields;
+    //    @DynamoDbPartitionKey
+//    public String getArticleId() {
+//        return articleId;
+//    }
+
+    // @DynamoDbSecondaryPartitionKey(indexNames = {"gsi_sku_lookup"})
+    public String getSku() {
+        return sku;
     }
 
-    public void setDynamicFields(Map<String, DynamicFieldValue> dynamicFields) {
-        this.dynamicFields = dynamicFields;
+    // @DynamoDbSecondaryPartitionKey(indexNames = {"gsi_catalog_lookup"})
+    public String getCatalogId() {
+        return catalogId;
     }
 
     @Override
     public String toString() {
-        return "Article::[articleId=" + articleId
-                + ", sku=" + sku
-                + ", name='" + name
-                + "', price=" + price
-                + ", inventory=" + inventory
-                + ", state=" + state
-                + ", isFeatured=" + isFeatured
-                + ", catalogId=" + catalogId
-                + ", createdAt=" + createdAt
-                + ", updatedAt=" + updatedAt
-                + ", dynamicFields (Size) =" + dynamicFields.size()
-                + "]";
+        return "Article{" +
+                "partitionKey='" + partitionKey + '\'' +
+                ", sortKey='" + sortKey + '\'' +
+                ", catalogId='" + catalogId + '\'' +
+                ", createdAt='" + createdAt + '\'' +
+                ", description='" + description + '\'' +
+                ", imageUrl='" + imageUrl + '\'' +
+                ", inventory=" + inventory +
+                ", isFeatured=" + isFeatured +
+                ", name='" + name + '\'' +
+                ", price=" + price +
+                ", sku='" + sku + '\'' +
+                ", state='" + state + '\'' +
+                ", updatedAt='" + updatedAt + '\'' +
+                '}';
     }
 }

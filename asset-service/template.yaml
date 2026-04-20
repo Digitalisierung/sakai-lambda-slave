@@ -1,49 +1,84 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Serverless application template for asset service
+Description: Serverless application template for asset service.
 Globals:
   Function:
     Timeout: 20
     MemorySize: 1024
+    Runtime: java21
+    Architectures:
+      - x86_64
 
 Resources:
-  GetCatalogsHandler:
+  ArticlesApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration:
+        Type: REGIONAL
+      Name:
+        !Sub '${AWS::StackName}-articles-api'
+      Cors:
+        AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+        AllowMethods: "'GET,OPTIONS'"
+        AllowOrigin: "'*'"
+  ListArticlesHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+  ListArticlesHandler:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
-      Handler: com.sakai.inventory.api.handler.GetCatalogsHandler::handleRequest
-      Runtime: java21
-      Architectures:
-        - x86_64
-      MemorySize: 1024
+      Handler: com.sakai.inventory.api.handler.ListArticlesHandler::handleRequest
+      Role: !GetAtt ListArticlesHandlerServiceRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref InventoryCatalogs
+          REGION: !Ref AWS::Region
       Events:
         ApiUnit:
           Type: Api
           Properties:
-            Path: /catalogs
+            Path: /articles
             Method: get
-  ApplicationResourceGroup:
-    Type: AWS::ResourceGroups::Group
-    Properties:
-      Name:
-        Fn::Sub: 'asset-service-${AWS::StackName}'
-      ResourceQuery:
-        Type: CLOUDFORMATION_STACK_1_0
-  ApplicationInsightsMonitoring:
-    Type: AWS::ApplicationInsights::Application
-    Properties:
-      ResourceGroupName:
-        Ref: ApplicationResourceGroup
-      AutoConfigurationEnabled: 'true'
+            RestApiId: !Ref ArticlesApi
 
   #########################################
   # DynamoDB Table
   #########################################
-  InventoryTable:
+  InventoryCatalogs:
     Type: AWS::DynamoDB::Table
-    Description: Inventory table with articles und catalogs (SAKAI Project).
     Properties:
+      TableName:
+        !Sub '${AWS::StackName}-inventory-catalogs'
       BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true # Das ist Backup der Datenbank. Relevant nur für Prod.
+      TimeToLiveSpecification: ## AWS sagt, wenn Daten länger als maximal 12 Monate nicht angerürt wurden, sollten diese irgendwo anders gespeichert werden - nicht in DynamoDB, sondern in S3, zum Beispiel. Dafür ist TTL da. Keine Pflicht, aber AWS Recomendation.
+        AttributeName: ttl
+        Enabled: true
       AttributeDefinitions:
         - AttributeName: partitionKey
           AttributeType: S
@@ -64,12 +99,15 @@ Resources:
           Projection:
             ProjectionType: ALL
 Outputs:
-  ApiUnitApi:
+  ApiEndpoint:
     Description: API Gateway endpoint URL for Prod stage for GetCatalogs function.
-    Value: !Sub 'https://${ApiUnitApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/catalogs'
-  GetCatalogsHandler:
-    Description: GetCatalogs Lambda Function ARN
-    Value: !GetAtt GetCatalogsHandler.Arn
-  GetCatalogsHandlerIamRole:
-    Description: Implicit IAM Role created for GetCatalogsHandler function.
-    Value: !GetAtt GetCatalogsHandlerRole.Arn
+    Value: !Sub 'http://localhost:4566/restapis/${ArticlesApi}/Prod/_user_request_/articles'
+  ListArticlesHandlerArn:
+    Description: ListArticlesHandler Lambda Function ARN.
+    Value: !GetAtt ListArticlesHandler.Arn
+  ListArticlesHandlerIamRole:
+    Description: Implicit IAM Role created for ListArticlesHandler function.
+    Value: !GetAtt ListArticlesHandler.Arn
+  DynamoDbTableName:
+    Description: Name of DynamoDB table.
+    Value: !Ref InventoryCatalogs

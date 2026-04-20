@@ -10,6 +10,15 @@ import com.sakai.inventory.api.model.Article;
 import com.sakai.inventory.api.model.DynamicFieldValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import utility.Utility;
 
 import java.util.ArrayList;
@@ -25,22 +34,53 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
     private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
 
     public ListArticlesHandler() {
-        LOGGER.info("GetCatalogsHandler constructor");
+        LOGGER.info("ListArticlesHandler constructor");
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent s, Context context) {
+        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
-        headers.put("X-Custom-Header", "application/json");
-
-        // String body = String.format("{\"message\": \"Lambda works successfully\"}");
-        List<Article> articles = fetchArticles();
-        List<ArticleDTO> articleDTOs = mapArticles(articles);
-
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-
         response.setHeaders(headers);
+
+
+        DynamoDbClient dbClient = DynamoDbClient
+                .builder()
+                .region(Region.EU_CENTRAL_1)
+                .credentialsProvider(
+                        StaticCredentialsProvider.create(
+                                AwsBasicCredentials.builder()
+                                        .accessKeyId("test")
+                                        .secretAccessKey("test")
+                                        .build()
+                        )
+                )
+                .build();
+
+        DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
+                .dynamoDbClient(dbClient)
+                .build();
+
+        DynamoDbTable<Article> articleTable = enhancedClient.table(
+                System.getenv("TABLE_NAME"),
+                TableSchema.fromBean(Article.class)
+        );
+
+        QueryConditional query = QueryConditional.keyEqualTo(
+                Key.builder()
+                        .partitionValue("ARTICLES")
+                        .build()
+        );
+        List<Article> articlesList = articleTable.query(query)
+                .items()
+                .stream()
+                .toList();
+
+        LOGGER.info("Number of Articles: {}", articlesList.size());
+
+        List<ArticleDTO> articleDTOs = mapArticles(articlesList);
+
         try {
             response.setBody(Utility.objectMapper.writeValueAsString(articleDTOs));
             response.setStatusCode(200);
@@ -64,12 +104,12 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
 
         for (Article article : articles) {
             articleDTOS.add(new ArticleDTO(
-                    article.getArticleId(),
+                    article.getSortKey(),
                     article.getName(),
                     article.getSku(),
                     article.getDescription(),
-                    article.getPrice(),
-                    article.getInventory(),
+                    article.getPrice().toString(),
+                    article.getInventory().longValue(),
                     article.getImageUrl(),
                     article.getCatalogId(),
                     true,
@@ -106,7 +146,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Antike Vase aus der Ming-Dynastie",
                         "Eine gut erhaltene Porzellanvase mit blau-weißen Mustern, ca. 16. Jahrhundert.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/ming_vase.jpg",
                         "AVAILABLE",
                         true,
@@ -122,7 +162,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Barock-Gemälde 'Landschaft mit Fluss'",
                         "Öl auf Leinwand, 18. Jahrhundert, Rahmen original.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/barock_painting.jpg",
                         "UNDER_EVALUATION",
                         false,
@@ -138,7 +178,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Renaissance-Bronzeskulptur 'Reiter'",
                         "Kleine Bronzestatue, italienische Arbeit, 17. Jahrhundert.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/bronze_rider.jpg",
                         "AVAILABLE",
                         true,
@@ -154,7 +194,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Art Deco Sekretär aus Nussbaum",
                         "Möbelstück mit Intarsien, Frankreich um 1925.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/artdeco_desk.jpg",
                         "SOLD",
                         false,
@@ -170,7 +210,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Samurai-Rüstung (Gusoku)",
                         "Komplette Rüstung aus Eisen, Seide und Leder, Edo-Periode.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/samurai_armor.jpg",
                         "AVAILABLE",
                         true,
@@ -186,7 +226,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Persischer Teppich 'Isfahan'",
                         "Handgeknüpfter Seidenteppich, 2.3 x 1.6 m, Anfang 20. Jh.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/isfahan_carpet.jpg",
                         "UNDER_EVALUATION",
                         false,
@@ -202,7 +242,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Moderne Skulptur 'Equilibrium'",
                         "Abstrakte Stahlskulptur des zeitgenössischen Künstlers M. Chen.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/equilibrium_sculpture.jpg",
                         "AVAILABLE",
                         true,
@@ -218,7 +258,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Klassische Violine 'Stradivarius-Kopie'",
                         "Geige deutscher Arbeit um 1900, ausgezeichneter Klang.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/violin_strad_copy.jpg",
                         "AVAILABLE",
                         false,
@@ -234,7 +274,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Ägyptische Uschebti-Figur",
                         "Fayence-Statuette, Spätzeit, für Grabbeigabe bestimmt.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/ushabti_figure.jpg",
                         "RESERVED",
                         false,
@@ -250,7 +290,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                         "Jugendstil-Vase von Émile Gallé",
                         "Glasvase mit eingeschliffenen Pflanzendekoren, Frankreich um 1900.",
                         "Nicht bewertet",
-                        1L,
+                        1,
                         "https://inventory-images.s3.eu-central-1.amazonaws.com/galle_vase.jpg",
                         "AVAILABLE",
                         true,
@@ -263,13 +303,15 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
     }
 
     private Article createArticle(String articleId, String sku, String name, String description, String price,
-                                  Long inventory, String imageUrl, String state, Boolean isFeatured, String catalogId,
+                                  Integer inventory, String imageUrl, String state, Boolean isFeatured, String catalogId,
                                   String createdAt, String updatedAt, Map<String, DynamicFieldValue> dynamicFields) {
 
-        Article article = new Article(name, sku);
-        article.setArticleId(articleId);
+        Article article = new Article();
+        article.setName(name);
+        article.setSku(sku);
+        //article.setArticleId(articleId);
         article.setDescription(description);
-        article.setPrice(price);
+        article.setPrice(Integer.parseInt(price));
         article.setInventory(inventory);
         article.setImageUrl(imageUrl);
         article.setState(state);
@@ -277,7 +319,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         article.setCatalogId(catalogId);
         article.setCreatedAt(createdAt);
         article.setUpdatedAt(updatedAt);
-        article.setDynamicFields(dynamicFields);
+        //article.setDynamicFields(dynamicFields);
 
         return article;
     }
