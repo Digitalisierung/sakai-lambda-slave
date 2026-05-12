@@ -2,7 +2,9 @@ version: 0.2
 phases:
   install:
     commands:
-      - yum install -y java-21-openjdk java-21-openjdk-devel
+      - cat /etc/*release
+      - sudo apt update
+      - sudo apt install -y java-21-openjdk java-21-openjdk-devel
 
   pre_build:
     commands:
