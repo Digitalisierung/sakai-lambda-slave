@@ -1,22 +1,19 @@
 version: 0.2
 phases:
-  install:
-    runtime-versions:
-      java: corretto21
-
   pre_build:
     commands:
       - echo Starting pre-build phase...
       - echo Nothing to do in the pre_build phase...
       - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
       - export PATH=$JAVA_HOME/bin:$PATH
+      - java -version
       - mvn -v
 
   build:
     commands:
       - echo Build started on `date`
       - echo Compiling and packaging the project...
-      - cd asset-service
+      - cd asset-service/
       # Führt den Build vom Root aus durch.
       # Da du den Shade-Plugin nutzt, wird hier das "Fat Jar" erstellt.
       - mvn clean package -Dmaven.test.skip=true
