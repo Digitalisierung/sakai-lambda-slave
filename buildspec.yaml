@@ -1,16 +1,14 @@
 version: 0.2
 phases:
   install:
-    commands:
-      - cat /etc/*release
-      - sudo apt update
-      - sudo apt install -y java-21-openjdk java-21-openjdk-devel
+    runtime-version:
+      java: corretto21
 
   pre_build:
     commands:
       - echo Starting pre-build phase...
       - echo Nothing to do in the pre_build phase...
-      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      - export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto
       - export PATH=$JAVA_HOME/bin:$PATH
       - java -version
       - mvn -v
@@ -29,6 +27,8 @@ phases:
       - echo Build completed on `date`
       - ls -l target/
       - jar tf target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
+      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-bucket-name" --value "${S3_LAMBDA_ART_BUCKET}" --type String --overwrite
+      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-key" --value "asset-service-lambda.jar" --type String --overwrite
 
 artifacts:
   files:
