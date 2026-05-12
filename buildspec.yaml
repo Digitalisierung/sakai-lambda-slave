@@ -1,5 +1,9 @@
 version: 0.2
 phases:
+  install:
+    commands:
+      - yum install -y java-21-openjdk java-21-openjdk-devel
+
   pre_build:
     commands:
       - echo Starting pre-build phase...
