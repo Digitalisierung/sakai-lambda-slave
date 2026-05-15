@@ -1,9 +1,12 @@
 package com.sakai.inventory.api.model;
 
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+
+@DynamoDbBean
 public class DynamicFieldValue {
     private String name;
     private String type; // "TEXT", "NUMBER", "BOOLEAN", "DATE", etc.
-    private Object value; // Eigentlicher Inhalt.
+    private String value; // Eigentlicher Inhalt.
 
     public DynamicFieldValue() {
     }
@@ -24,11 +27,11 @@ public class DynamicFieldValue {
         this.type = type;
     }
 
-    public Object getValue() {
+    public String getValue() {
         return value;
     }
 
-    public void setValue(Object value) {
+    public void setValue(String value) {
         this.value = value;
     }
 

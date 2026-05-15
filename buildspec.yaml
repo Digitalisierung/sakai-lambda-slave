@@ -1,22 +1,22 @@
 version: 0.2
 phases:
   install:
-    runtime-versions:
+    runtime-version:
       java: corretto21
 
   pre_build:
     commands:
       - echo Starting pre-build phase...
-      - echo Nothing to do in the pre_build phase...
-      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      - export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto
       - export PATH=$JAVA_HOME/bin:$PATH
+      - java -version
       - mvn -v
 
   build:
     commands:
       - echo Build started on `date`
       - echo Compiling and packaging the project...
-      - cd asset-service
+      - cd asset-service/
       # Führt den Build vom Root aus durch.
       # Da du den Shade-Plugin nutzt, wird hier das "Fat Jar" erstellt.
       - mvn clean package -Dmaven.test.skip=true
@@ -26,6 +26,9 @@ phases:
       - echo Build completed on `date`
       - ls -l target/
       - jar tf target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
+      - aws s3 cp target/asset-service-lambda.jar s3://${S3_LAMBDA_ART_BUCKET}/asset-service-lambda.jar
+      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-bucket-name" --value "${S3_LAMBDA_ART_BUCKET}" --type String --overwrite
+      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-key" --value "asset-service-lambda.jar" --type String --overwrite
 
 artifacts:
   files:

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   localstack:
     container_name: localstack
@@ -10,16 +8,16 @@ services:
       - "4510-4559:4510-4559"
     environment:
       # Services, die gestartet werden sollen
-      - SERVICES=s3,sqs,dynamodb,lambda,apigateway,cloudformation,cloudwatch,iam,sts,ssm,events,ses,sns,stepfunctions,logs
+      - SERVICES=apigateway,cloudformation,cloudwatch,dynamodb,dynamodbstreams,events,iam,kinesis,kms,lambda,logs,s3,secretsmanager,sns,sqs,ssm,sts,apigatewayv2
 
       # Persistenz aktivieren (optional)
       - PERSISTENCE=1
-      - DATA_DIR=/var/lib/localstack/data
+      # - DATA_DIR=/var/lib/localstack/data
 
       # Für Lambda Funktionen
-      - LAMBDA_EXECUTOR=docker-reuse
-      # - LAMBDA_REMOTE_DOCKER=true
-      - LAMBDA_DOCKER_NETWORK=localstack_default
+      - LAMBDA_EXECUTOR=docker
+      - LAMBDA_REMOTE_DOCKER=false
+      # - LAMBDA_DOCKER_NETWORK=localstack_default
 
       # Edge Port (wichtig für alle Services)
       - EDGE_PORT=4566
@@ -31,17 +29,18 @@ services:
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=eu-central-1
+      - LOCALSTACK_AUTH_TOKEN=ls-PexeyIsu-lURA-9398-zaWi-WaxI27420bd9
     volumes:
       # Für persistente Daten
       - localstack_data:/var/lib/localstack
 
       # Docker Socket für Lambda-Funktionen
       - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - localstack-network
+#    networks:
+#      - localstack-network
 volumes:
   localstack_data:
     driver: local
-networks:
-  localstack-network:
-    driver: bridge
+#networks:
+#  localstack-network:
+#    driver: bridge

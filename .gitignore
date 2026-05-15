@@ -85,7 +85,6 @@ pom.properties
 #######################################
 # Lambda
 #######################################
-/events/
 /asset-service/.aws-sam/
 *.zip
 packaged.yaml
@@ -101,3 +100,5 @@ credentials.json
 **/secrets/
 /asset-service/Lambda falsch.png
 /asset-service/Screenshot 2026-04-04 at 16-36-54 jar-artifact-bucket-jre-sakai - S3 bucket S3 eu-central-1.png
+/asset-service/env.json
+**/env.json
