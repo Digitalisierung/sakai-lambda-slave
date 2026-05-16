@@ -7,6 +7,7 @@ phases:
   pre_build:
     commands:
       - echo Starting pre-build phase...
+      - ls /usr/lib/jvm
       - export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto
       - export PATH=$JAVA_HOME/bin:$PATH
       - java -version
