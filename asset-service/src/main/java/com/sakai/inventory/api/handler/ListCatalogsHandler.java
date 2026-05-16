@@ -3,6 +3,7 @@ package com.sakai.inventory.api.handler;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dao.CreateKhachiDao;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -11,9 +12,11 @@ import utility.Utility;
 
 import java.util.Map;
 
-public class CreateNewKhachiHandler implements RequestHandler<APIGatewayProxyRequestEvent, String> {
+public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private CreateKhachiDao transactionDao;
-    public String handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         String body = input.getBody();
         String str = "Hello from Lambda!";
         try {
@@ -25,6 +28,6 @@ public class CreateNewKhachiHandler implements RequestHandler<APIGatewayProxyReq
             throw new RuntimeException(e);
         }
 
-        return "OK";
+        return response;
     }
 }
