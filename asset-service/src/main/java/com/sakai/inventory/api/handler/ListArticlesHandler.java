@@ -107,7 +107,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                     article.getSku(),
                     article.getDescription(),
                     article.getPrice().toString(),
-                    article.getInventory().longValue(),
+                    article.getStock().longValue(),
                     article.getImageUrl(),
                     article.getCatalogId(),
                     true,
