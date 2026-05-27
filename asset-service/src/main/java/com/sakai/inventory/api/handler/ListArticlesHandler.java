@@ -9,8 +9,6 @@ import com.sakai.inventory.api.dto.ArticleDTO;
 import com.sakai.inventory.api.model.Article;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -48,14 +46,14 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         DynamoDbClient dbClient = DynamoDbClient.builder()
                 .httpClientBuilder(AwsCrtHttpClient.builder())
                 .region(Region.EU_CENTRAL_1)
-                .credentialsProvider(
-                        StaticCredentialsProvider.create(
-                                AwsBasicCredentials.builder()
-                                        .accessKeyId("test")
-                                        .secretAccessKey("test")
-                                        .build()
-                        )
-                )
+//                .credentialsProvider(
+//                        StaticCredentialsProvider.create(
+//                                AwsBasicCredentials.builder()
+//                                        .accessKeyId("test")
+//                                        .secretAccessKey("test")
+//                                        .build()
+//                        )
+//                )
                 .build();
 
         DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
@@ -109,7 +107,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
                     article.getSku(),
                     article.getDescription(),
                     article.getPrice().toString(),
-                    article.getInventory().longValue(),
+                    article.getStock().longValue(),
                     article.getImageUrl(),
                     article.getCatalogId(),
                     true,

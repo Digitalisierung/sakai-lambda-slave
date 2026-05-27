@@ -1,9 +1,0 @@
-version: 0.0
-Resources:
-  - ListArticlesFunction:
-      Type: AWS::Lambda::Function
-      Properties:
-        Name: "ListArticlesFunction"
-        Alias: "ListArticlesFunctionProd"
-        CurrentVersion: "arn:aws:lambda:eu-central-1:251183416711:function:ListArticlesFunction:3"
-        TargetVersion: "arn:aws:lambda:eu-central-1:251183416711:function:ListArticlesFunction:4"

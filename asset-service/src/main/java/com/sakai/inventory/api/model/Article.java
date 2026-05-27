@@ -8,26 +8,18 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortK
 @DynamoDbBean
 public class Article {
 
-    //  = "ARTICLES"
     private String partitionKey;
-    // = "ARTiCLES#SKU-120#40eb8f95-852b-40f6-8fa4-dc744132db4a"
     private String sortKey;
-    private String catalogId;
-    //  = "2026-02-05T14:30:00Z"
-    private String createdAt;
-    private String description;
-    // = "http://s3.img01.png"
-    private String imageUrl;
-    private Integer inventory;
-    private Boolean isFeatured;
-    //  = "iPhone 15"
-    private String name;
-    private Integer price;
-    // = "SKU-120"
     private String sku;
-    //  = "AVAILABLE"
+    private String name;
+    private String description;
+    private Integer price;
+    private Integer stock;
+    private String imageUrl;
     private String state;
-    //  = "2026-02-05T14:30:00Z"
+    private Boolean isFeatured;
+    private String catalogId;
+    private String createdAt;
     private String updatedAt;
 
 
@@ -83,12 +75,12 @@ public class Article {
         this.imageUrl = imageUrl;
     }
 
-    public Integer getInventory() {
-        return inventory;
+    public Integer getStock() {
+        return stock;
     }
 
-    public void setInventory(Integer inventory) {
-        this.inventory = inventory;
+    public void setStock(Integer stock) {
+        this.stock = stock;
     }
 
     public Boolean getFeatured() {
@@ -159,7 +151,7 @@ public class Article {
                 ", createdAt='" + createdAt + '\'' +
                 ", description='" + description + '\'' +
                 ", imageUrl='" + imageUrl + '\'' +
-                ", inventory=" + inventory +
+                ", stock=" + stock +
                 ", isFeatured=" + isFeatured +
                 ", name='" + name + '\'' +
                 ", price=" + price +
