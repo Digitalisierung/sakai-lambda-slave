@@ -16,20 +16,21 @@ import utility.Utility;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * BE-13: POST /catalogs
  * Erstellt einen neuen Katalog.
- * Pflichtfelder mit Validierung: name (nicht leer), color (gültiges Hex-Format #RRGGBB).
+ * Pflichtfelder mit Validierung: name (nicht leer), color (Hex-Format #RRGGBB oder #RGB).
+ *
+ * sortKey-Format: CATALOGS#<NAME_UPPER>#METADATA#<uuid>
+ * Entspricht dem Format der vorhandenen Testdaten.
  */
 public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LogManager.getLogger(CreateCatalogHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
-
-    // Einfache Hex-Farb-Validierung: #RGB oder #RRGGBB
-    private static final java.util.regex.Pattern COLOR_PATTERN =
-            java.util.regex.Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
+    private static final Pattern COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
@@ -41,7 +42,6 @@ public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyReque
 
             CreateCatalogRequest req = Utility.objectMapper.readValue(body, CreateCatalogRequest.class);
 
-            // Pflichtfeldvalidierung
             if (req.name() == null || req.name().isBlank()) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pflichtfeld 'name' fehlt.\"}", Utility.getHeaders());
             }
@@ -54,13 +54,16 @@ public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyReque
                         Utility.getHeaders());
             }
 
-            String catalogId = UUID.randomUUID().toString();
+            String uuid = UUID.randomUUID().toString();
             String now = Instant.now().toString();
+
+            // sortKey-Format passend zu den Testdaten: CATALOGS#<NAME>#METADATA#<uuid>
+            String nameSegment = req.name().toUpperCase().replaceAll("[^A-Z0-9]", "_");
+            String sortKey = "CATALOGS#" + nameSegment + "#METADATA#" + uuid;
 
             Catalog catalog = new Catalog();
             catalog.setPartitionKey("CATALOGS");
-            catalog.setSortKey("CAT#" + catalogId);
-            catalog.setCatalogId(catalogId);
+            catalog.setSortKey(sortKey);
             catalog.setName(req.name());
             catalog.setDescription(req.description());
             catalog.setColor(req.color());
@@ -72,12 +75,10 @@ public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyReque
                     .table(TABLE_NAME, TableSchema.fromBean(Catalog.class));
             table.putItem(catalog);
 
-            LOGGER.info("Neuer Katalog erstellt: {}", catalogId);
+            LOGGER.info("Neuer Katalog erstellt: {}", uuid);
 
-            CatalogDTO dto = new CatalogDTO(
-                    catalog.getCatalogId(), catalog.getName(), catalog.getDescription(),
-                    catalog.getColor(), 0, catalog.getCreatedAt(), catalog.getUpdatedAt()
-            );
+            CatalogDTO dto = new CatalogDTO(uuid, catalog.getName(), catalog.getDescription(),
+                    catalog.getColor(), 0, catalog.getCreatedAt(), catalog.getUpdatedAt());
             return Utility.getApiResponse(201, Utility.objectMapper.writeValueAsString(dto), Utility.getHeaders());
 
         } catch (Exception e) {

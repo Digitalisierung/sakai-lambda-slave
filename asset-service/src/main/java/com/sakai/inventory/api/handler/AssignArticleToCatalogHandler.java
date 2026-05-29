@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.infrastructure.KeyHelper;
 import com.sakai.inventory.api.model.Article;
 import com.sakai.inventory.api.model.Catalog;
 import org.apache.logging.log4j.LogManager;
@@ -21,13 +22,12 @@ import java.util.Map;
 /**
  * BE-16: POST /catalogs/{id}/articles
  * Weist einen Artikel einem Katalog zu.
+ * Request-Body: { "articleId": "<uuid>" }
  *
- * Request-Body: { "articleId": "abc123" }
- *
- * Vorgehen (Single-Table Design):
- *   1. Katalog und Artikel prüfen (beide müssen existieren).
- *   2. articleId auf dem Artikel-Item aktualisieren (catalogId = catalogId).
- *   3. productCount auf dem Katalog-Item erhöhen (+1).
+ * Vorgehen:
+ *   1. Katalog und Artikel per UUID-Query suchen (vollständige sortKeys ermitteln).
+ *   2. catalogId am Artikel-Item aktualisieren.
+ *   3. productCount am Katalog erhöhen (+1).
  */
 public class AssignArticleToCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -41,7 +41,7 @@ public class AssignArticleToCatalogHandler implements RequestHandler<APIGatewayP
             if (pathParams == null || !pathParams.containsKey("id")) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pfadparameter 'id' fehlt.\"}", Utility.getHeaders());
             }
-            String catalogId = pathParams.get("id");
+            String catalogUuid = pathParams.get("id");
 
             String body = request.getBody();
             if (body == null || body.isBlank()) {
@@ -50,8 +50,8 @@ public class AssignArticleToCatalogHandler implements RequestHandler<APIGatewayP
 
             @SuppressWarnings("unchecked")
             Map<String, String> bodyMap = Utility.objectMapper.readValue(body, Map.class);
-            String articleId = bodyMap.get("articleId");
-            if (articleId == null || articleId.isBlank()) {
+            String articleUuid = bodyMap.get("articleId");
+            if (articleUuid == null || articleUuid.isBlank()) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pflichtfeld 'articleId' fehlt.\"}", Utility.getHeaders());
             }
 
@@ -60,58 +60,45 @@ public class AssignArticleToCatalogHandler implements RequestHandler<APIGatewayP
             DynamoDbTable<Article> articleTable = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Article.class));
 
-            // Katalog prüfen
-            Key catalogKey = Key.builder()
-                    .partitionValue("CATALOGS")
-                    .sortValue("CAT#" + catalogId)
-                    .build();
-            Catalog catalog = catalogTable.getItem(catalogKey);
+            // Beide per UUID-Query suchen
+            Catalog catalog = KeyHelper.findCatalogById(catalogTable, catalogUuid);
             if (catalog == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Katalog nicht gefunden.\"}", Utility.getHeaders());
             }
 
-            // Artikel prüfen
-            Key articleKey = Key.builder()
-                    .partitionValue("ARTICLES")
-                    .sortValue("ARTCL#" + articleId)
-                    .build();
-            Article article = articleTable.getItem(articleKey);
+            Article article = KeyHelper.findArticleById(articleTable, articleUuid);
             if (article == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Artikel nicht gefunden.\"}", Utility.getHeaders());
             }
 
             String now = Instant.now().toString();
 
-            // Artikel: catalogId setzen
+            // Artikel: catalogId auf die UUID setzen
             Article articlePatch = new Article();
-            articlePatch.setPartitionKey("ARTICLES");
-            articlePatch.setSortKey("ARTCL#" + articleId);
-            articlePatch.setCatalogId(catalogId);
+            articlePatch.setPartitionKey(article.getPartitionKey());
+            articlePatch.setSortKey(article.getSortKey());
+            articlePatch.setCatalogId(catalogUuid);
             articlePatch.setUpdatedAt(now);
             articleTable.updateItem(UpdateItemEnhancedRequest.builder(Article.class)
-                    .item(articlePatch)
-                    .ignoreNulls(true)
-                    .build());
+                    .item(articlePatch).ignoreNulls(true).build());
 
             // Katalog: productCount erhöhen
             int newCount = (catalog.getProductCount() != null ? catalog.getProductCount() : 0) + 1;
             Catalog catalogPatch = new Catalog();
-            catalogPatch.setPartitionKey("CATALOGS");
-            catalogPatch.setSortKey("CAT#" + catalogId);
+            catalogPatch.setPartitionKey(catalog.getPartitionKey());
+            catalogPatch.setSortKey(catalog.getSortKey());
             catalogPatch.setProductCount(newCount);
             catalogPatch.setUpdatedAt(now);
             catalogTable.updateItem(UpdateItemEnhancedRequest.builder(Catalog.class)
-                    .item(catalogPatch)
-                    .ignoreNulls(true)
-                    .build());
+                    .item(catalogPatch).ignoreNulls(true).build());
 
-            LOGGER.info("Artikel {} dem Katalog {} zugewiesen.", articleId, catalogId);
+            LOGGER.info("Artikel {} dem Katalog {} zugewiesen.", articleUuid, catalogUuid);
             return Utility.getApiResponse(200,
                     "{\"message\": \"Artikel erfolgreich dem Katalog zugewiesen.\"}",
                     Utility.getHeaders());
 
         } catch (Exception e) {
-            LOGGER.error("Fehler beim Zuweisen des Artikels: {}", e.getMessage(), e);
+            LOGGER.error("Fehler beim Zuweisen: {}", e.getMessage(), e);
             return Utility.getApiResponse(500, "{\"message\": \"" + e.getMessage() + "\"}", Utility.getHeaders());
         }
     }

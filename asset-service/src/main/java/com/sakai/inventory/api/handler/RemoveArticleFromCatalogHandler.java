@@ -5,12 +5,12 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.infrastructure.KeyHelper;
 import com.sakai.inventory.api.model.Article;
 import com.sakai.inventory.api.model.Catalog;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import utility.Utility;
@@ -23,9 +23,10 @@ import java.util.Map;
  * Entfernt einen Artikel aus einem Katalog.
  *
  * Vorgehen:
- *   1. Katalog und Artikel prüfen.
- *   2. catalogId auf dem Artikel-Item leeren.
- *   3. productCount auf dem Katalog-Item verringern (-1, minimum 0).
+ *   1. Katalog und Artikel per UUID-Query suchen.
+ *   2. Prüfen ob der Artikel wirklich diesem Katalog zugehört.
+ *   3. catalogId am Artikel leeren.
+ *   4. productCount am Katalog verringern (minimum 0).
  */
 public class RemoveArticleFromCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -43,36 +44,26 @@ public class RemoveArticleFromCatalogHandler implements RequestHandler<APIGatewa
                         "{\"message\": \"Pfadparameter 'id' und 'articleId' sind erforderlich.\"}",
                         Utility.getHeaders());
             }
-            String catalogId  = pathParams.get("id");
-            String articleId  = pathParams.get("articleId");
+            String catalogUuid  = pathParams.get("id");
+            String articleUuid  = pathParams.get("articleId");
 
             DynamoDbTable<Catalog> catalogTable = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Catalog.class));
             DynamoDbTable<Article> articleTable = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Article.class));
 
-            // Katalog prüfen
-            Key catalogKey = Key.builder()
-                    .partitionValue("CATALOGS")
-                    .sortValue("CAT#" + catalogId)
-                    .build();
-            Catalog catalog = catalogTable.getItem(catalogKey);
+            Catalog catalog = KeyHelper.findCatalogById(catalogTable, catalogUuid);
             if (catalog == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Katalog nicht gefunden.\"}", Utility.getHeaders());
             }
 
-            // Artikel prüfen
-            Key articleKey = Key.builder()
-                    .partitionValue("ARTICLES")
-                    .sortValue("ARTCL#" + articleId)
-                    .build();
-            Article article = articleTable.getItem(articleKey);
+            Article article = KeyHelper.findArticleById(articleTable, articleUuid);
             if (article == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Artikel nicht gefunden.\"}", Utility.getHeaders());
             }
 
-            // Prüfen ob der Artikel wirklich diesem Katalog zugehört
-            if (!catalogId.equals(article.getCatalogId())) {
+            // Prüfen ob der Artikel diesem Katalog zugeordnet ist
+            if (!catalogUuid.equals(article.getCatalogId())) {
                 return Utility.getApiResponse(400,
                         "{\"message\": \"Dieser Artikel ist dem angegebenen Katalog nicht zugewiesen.\"}",
                         Utility.getHeaders());
@@ -80,38 +71,32 @@ public class RemoveArticleFromCatalogHandler implements RequestHandler<APIGatewa
 
             String now = Instant.now().toString();
 
-            // Artikel: catalogId leeren — DynamoDB UpdateExpression REMOVE wird über Low-Level-API benötigt,
-            // da ignoreNulls das Setzen auf null ignoriert. Wir setzen catalogId auf leeren String als
-            // Konvention für "kein Katalog zugewiesen".
+            // Artikel: catalogId auf leeren String setzen ("kein Katalog zugewiesen")
             Article articlePatch = new Article();
-            articlePatch.setPartitionKey("ARTICLES");
-            articlePatch.setSortKey("ARTCL#" + articleId);
+            articlePatch.setPartitionKey(article.getPartitionKey());
+            articlePatch.setSortKey(article.getSortKey());
             articlePatch.setCatalogId("");
             articlePatch.setUpdatedAt(now);
             articleTable.updateItem(UpdateItemEnhancedRequest.builder(Article.class)
-                    .item(articlePatch)
-                    .ignoreNulls(true)
-                    .build());
+                    .item(articlePatch).ignoreNulls(true).build());
 
             // Katalog: productCount verringern (minimum 0)
             int newCount = Math.max(0, (catalog.getProductCount() != null ? catalog.getProductCount() : 0) - 1);
             Catalog catalogPatch = new Catalog();
-            catalogPatch.setPartitionKey("CATALOGS");
-            catalogPatch.setSortKey("CAT#" + catalogId);
+            catalogPatch.setPartitionKey(catalog.getPartitionKey());
+            catalogPatch.setSortKey(catalog.getSortKey());
             catalogPatch.setProductCount(newCount);
             catalogPatch.setUpdatedAt(now);
             catalogTable.updateItem(UpdateItemEnhancedRequest.builder(Catalog.class)
-                    .item(catalogPatch)
-                    .ignoreNulls(true)
-                    .build());
+                    .item(catalogPatch).ignoreNulls(true).build());
 
-            LOGGER.info("Artikel {} aus Katalog {} entfernt.", articleId, catalogId);
+            LOGGER.info("Artikel {} aus Katalog {} entfernt.", articleUuid, catalogUuid);
             return Utility.getApiResponse(200,
                     "{\"message\": \"Artikel erfolgreich aus dem Katalog entfernt.\"}",
                     Utility.getHeaders());
 
         } catch (Exception e) {
-            LOGGER.error("Fehler beim Entfernen des Artikels aus dem Katalog: {}", e.getMessage(), e);
+            LOGGER.error("Fehler beim Entfernen: {}", e.getMessage(), e);
             return Utility.getApiResponse(500, "{\"message\": \"" + e.getMessage() + "\"}", Utility.getHeaders());
         }
     }

@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.infrastructure.KeyHelper;
 import com.sakai.inventory.api.model.Catalog;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,7 +18,7 @@ import java.util.Map;
 
 /**
  * BE-15: DELETE /catalogs/{id}
- * Löscht einen Katalog anhand seiner ID.
+ * Löscht einen Katalog anhand seiner UUID.
  */
 public class DeleteCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -31,23 +32,23 @@ public class DeleteCatalogHandler implements RequestHandler<APIGatewayProxyReque
             if (pathParams == null || !pathParams.containsKey("id")) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pfadparameter 'id' fehlt.\"}", Utility.getHeaders());
             }
-            String catalogId = pathParams.get("id");
+            String id = pathParams.get("id");
 
             DynamoDbTable<Catalog> table = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Catalog.class));
 
-            Key key = Key.builder()
-                    .partitionValue("CATALOGS")
-                    .sortValue("CAT#" + catalogId)
-                    .build();
-
-            Catalog existing = table.getItem(key);
+            Catalog existing = KeyHelper.findCatalogById(table, id);
             if (existing == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Katalog nicht gefunden.\"}", Utility.getHeaders());
             }
 
+            Key key = Key.builder()
+                    .partitionValue(existing.getPartitionKey())
+                    .sortValue(existing.getSortKey())
+                    .build();
             table.deleteItem(key);
-            LOGGER.info("Katalog gelöscht: {}", catalogId);
+
+            LOGGER.info("Katalog gelöscht: {}", id);
             return Utility.getApiResponse(204, "", Utility.getHeaders());
 
         } catch (Exception e) {

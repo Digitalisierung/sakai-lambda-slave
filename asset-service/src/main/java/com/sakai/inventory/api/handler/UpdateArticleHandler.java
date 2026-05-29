@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.sakai.inventory.api.dto.ArticleDTO;
 import com.sakai.inventory.api.dto.UpdateArticleRequest;
 import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.infrastructure.KeyHelper;
 import com.sakai.inventory.api.model.Article;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,8 +23,8 @@ import java.util.Map;
 
 /**
  * BE-09: PUT /articles/{id}
- * Aktualisiert einen bestehenden Artikel (Partial Update).
- * Nur Felder, die im Request-Body gesetzt sind, werden überschrieben.
+ * Partial Update — nur gesetzte Felder werden überschrieben.
+ * Sucht den Artikel via UUID (letztes sortKey-Segment), da der vollständige sortKey unbekannt ist.
  */
 public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -37,7 +38,7 @@ public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyReque
             if (pathParams == null || !pathParams.containsKey("id")) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pfadparameter 'id' fehlt.\"}", Utility.getHeaders());
             }
-            String articleId = pathParams.get("id");
+            String id = pathParams.get("id");
 
             String body = request.getBody();
             if (body == null || body.isBlank()) {
@@ -49,55 +50,57 @@ public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyReque
             DynamoDbTable<Article> table = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Article.class));
 
-            // Prüfen ob Artikel existiert
-            Key key = Key.builder()
-                    .partitionValue("ARTICLES")
-                    .sortValue("ARTCL#" + articleId)
-                    .build();
-            Article existing = table.getItem(key);
+            // Vollständigen sortKey via Query ermitteln
+            Article existing = KeyHelper.findArticleById(table, id);
             if (existing == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Artikel nicht gefunden.\"}", Utility.getHeaders());
             }
 
-            // Nur gesetzte Felder übernehmen (Partial Update)
+            // Patch mit dem tatsächlichen Key aus der DB
             Article patch = new Article();
-            patch.setPartitionKey("ARTICLES");
-            patch.setSortKey("ARTCL#" + articleId);
-            if (req.name() != null)      patch.setName(req.name());
-            if (req.sku() != null)       patch.setSku(req.sku());
+            patch.setPartitionKey(existing.getPartitionKey());
+            patch.setSortKey(existing.getSortKey());
+            if (req.name() != null)        patch.setName(req.name());
+            if (req.sku() != null)         patch.setSku(req.sku());
             if (req.description() != null) patch.setDescription(req.description());
-            if (req.price() != null)     patch.setPrice(req.price());
-            if (req.stock() != null)     patch.setStock(req.stock());
-            if (req.imageUrl() != null)  patch.setImageUrl(req.imageUrl());
-            if (req.state() != null)     patch.setState(req.state());
-            if (req.catalogId() != null) patch.setCatalogId(req.catalogId());
-            if (req.isFeatured() != null) patch.setFeatured(req.isFeatured());
+            if (req.price() != null)       patch.setPrice(req.price());
+            if (req.stock() != null)       patch.setStock(req.stock());
+            if (req.imageUrl() != null)    patch.setImageUrl(req.imageUrl());
+            if (req.state() != null)       patch.setState(req.state());
+            if (req.catalogId() != null)   patch.setCatalogId(req.catalogId());
+            if (req.isFeatured() != null)  patch.setFeatured(req.isFeatured());
             patch.setUpdatedAt(Instant.now().toString());
 
-            // ignoreNulls=true → nur gesetzte Felder werden in DynamoDB geschrieben
             table.updateItem(UpdateItemEnhancedRequest.builder(Article.class)
                     .item(patch)
                     .ignoreNulls(true)
                     .build());
 
-            // Aktuellen Stand aus DB lesen und zurückgeben
+            // Aktuellen Stand lesen und zurückgeben
+            Key key = Key.builder()
+                    .partitionValue(existing.getPartitionKey())
+                    .sortValue(existing.getSortKey())
+                    .build();
             Article updated = table.getItem(key);
-            ArticleDTO dto = new ArticleDTO(
-                    updated.getSortKey(), updated.getName(), updated.getSku(),
-                    updated.getDescription(),
-                    updated.getPrice() != null ? updated.getPrice().toString() : null,
-                    updated.getStock() != null ? updated.getStock().longValue() : null,
-                    updated.getImageUrl(), updated.getCatalogId(),
-                    true, updated.getFeatured(), new HashMap<>(),
-                    updated.getCreatedAt(), updated.getUpdatedAt()
-            );
 
-            LOGGER.info("Artikel aktualisiert: {}", articleId);
-            return Utility.getApiResponse(200, Utility.objectMapper.writeValueAsString(dto), Utility.getHeaders());
+            LOGGER.info("Artikel aktualisiert: {}", id);
+            return Utility.getApiResponse(200, Utility.objectMapper.writeValueAsString(mapToDTO(updated)), Utility.getHeaders());
 
         } catch (Exception e) {
             LOGGER.error("Fehler beim Aktualisieren des Artikels: {}", e.getMessage(), e);
             return Utility.getApiResponse(500, "{\"message\": \"" + e.getMessage() + "\"}", Utility.getHeaders());
         }
+    }
+
+    private ArticleDTO mapToDTO(Article article) {
+        return new ArticleDTO(
+                KeyHelper.extractId(article.getSortKey()),
+                article.getName(), article.getSku(), article.getDescription(),
+                article.getPrice() != null ? article.getPrice().toString() : null,
+                article.getStock() != null ? article.getStock().longValue() : null,
+                article.getImageUrl(), article.getCatalogId(),
+                true, article.getFeatured(), new HashMap<>(),
+                article.getCreatedAt(), article.getUpdatedAt()
+        );
     }
 }

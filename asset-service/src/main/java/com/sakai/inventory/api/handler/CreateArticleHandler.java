@@ -22,6 +22,9 @@ import java.util.UUID;
  * BE-08: POST /articles
  * Legt einen neuen Artikel an.
  * Pflichtfelder: name, sku
+ *
+ * sortKey-Format: ARTICLES#<uuid>
+ * Die UUID ist gleichzeitig die API-seitige ID des Artikels.
  */
 public class CreateArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -38,7 +41,6 @@ public class CreateArticleHandler implements RequestHandler<APIGatewayProxyReque
 
             CreateArticleRequest req = Utility.objectMapper.readValue(body, CreateArticleRequest.class);
 
-            // Pflichtfeldvalidierung
             if (req.name() == null || req.name().isBlank()) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pflichtfeld 'name' fehlt.\"}", Utility.getHeaders());
             }
@@ -46,12 +48,13 @@ public class CreateArticleHandler implements RequestHandler<APIGatewayProxyReque
                 return Utility.getApiResponse(400, "{\"message\": \"Pflichtfeld 'sku' fehlt.\"}", Utility.getHeaders());
             }
 
-            String articleId = UUID.randomUUID().toString();
+            String uuid = UUID.randomUUID().toString();
             String now = Instant.now().toString();
 
+            // sortKey-Format: ARTICLES#<uuid> — UUID ist letztes Segment, daher von KeyHelper extrahierbar
             Article article = new Article();
             article.setPartitionKey("ARTICLES");
-            article.setSortKey("ARTCL#" + articleId);
+            article.setSortKey("ARTICLES#" + uuid);
             article.setName(req.name());
             article.setSku(req.sku());
             article.setDescription(req.description());
@@ -68,11 +71,11 @@ public class CreateArticleHandler implements RequestHandler<APIGatewayProxyReque
                     .table(TABLE_NAME, TableSchema.fromBean(Article.class));
             table.putItem(article);
 
-            LOGGER.info("Neuer Artikel erstellt: {}", articleId);
+            LOGGER.info("Neuer Artikel erstellt: {}", uuid);
 
             ArticleDTO dto = new ArticleDTO(
-                    article.getSortKey(), article.getName(), article.getSku(),
-                    article.getDescription(),
+                    uuid,
+                    article.getName(), article.getSku(), article.getDescription(),
                     article.getPrice() != null ? article.getPrice().toString() : null,
                     article.getStock() != null ? article.getStock().longValue() : null,
                     article.getImageUrl(), article.getCatalogId(),

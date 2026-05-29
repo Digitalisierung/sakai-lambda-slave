@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.sakai.inventory.api.dto.CatalogDTO;
 import com.sakai.inventory.api.dto.UpdateCatalogRequest;
 import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.infrastructure.KeyHelper;
 import com.sakai.inventory.api.model.Catalog;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,19 +19,18 @@ import utility.Utility;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * BE-14: PUT /catalogs/{id}
- * Aktualisiert Katalog-Details (Partial Update).
- * Nur gesetzte Felder werden überschrieben.
+ * Partial Update — nur gesetzte Felder werden überschrieben.
+ * Sucht den Katalog via UUID (letztes sortKey-Segment).
  */
 public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOGGER = LogManager.getLogger(UpdateCatalogHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
-
-    private static final java.util.regex.Pattern COLOR_PATTERN =
-            java.util.regex.Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
+    private static final Pattern COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
@@ -39,7 +39,7 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
             if (pathParams == null || !pathParams.containsKey("id")) {
                 return Utility.getApiResponse(400, "{\"message\": \"Pfadparameter 'id' fehlt.\"}", Utility.getHeaders());
             }
-            String catalogId = pathParams.get("id");
+            String id = pathParams.get("id");
 
             String body = request.getBody();
             if (body == null || body.isBlank()) {
@@ -48,7 +48,6 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
 
             UpdateCatalogRequest req = Utility.objectMapper.readValue(body, UpdateCatalogRequest.class);
 
-            // Farbcode validieren, wenn gesetzt
             if (req.color() != null && !COLOR_PATTERN.matcher(req.color()).matches()) {
                 return Utility.getApiResponse(400,
                         "{\"message\": \"'color' muss ein gültiger Hex-Farbcode sein (z.B. #FF5733).\"}",
@@ -58,19 +57,14 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
             DynamoDbTable<Catalog> table = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Catalog.class));
 
-            Key key = Key.builder()
-                    .partitionValue("CATALOGS")
-                    .sortValue("CAT#" + catalogId)
-                    .build();
-
-            Catalog existing = table.getItem(key);
+            Catalog existing = KeyHelper.findCatalogById(table, id);
             if (existing == null) {
                 return Utility.getApiResponse(404, "{\"message\": \"Katalog nicht gefunden.\"}", Utility.getHeaders());
             }
 
             Catalog patch = new Catalog();
-            patch.setPartitionKey("CATALOGS");
-            patch.setSortKey("CAT#" + catalogId);
+            patch.setPartitionKey(existing.getPartitionKey());
+            patch.setSortKey(existing.getSortKey());
             if (req.name() != null)        patch.setName(req.name());
             if (req.description() != null) patch.setDescription(req.description());
             if (req.color() != null)       patch.setColor(req.color());
@@ -81,20 +75,27 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
                     .ignoreNulls(true)
                     .build());
 
+            Key key = Key.builder()
+                    .partitionValue(existing.getPartitionKey())
+                    .sortValue(existing.getSortKey())
+                    .build();
             Catalog updated = table.getItem(key);
-            CatalogDTO dto = new CatalogDTO(
-                    updated.getCatalogId(), updated.getName(), updated.getDescription(),
-                    updated.getColor(),
-                    updated.getProductCount() != null ? updated.getProductCount() : 0,
-                    updated.getCreatedAt(), updated.getUpdatedAt()
-            );
 
-            LOGGER.info("Katalog aktualisiert: {}", catalogId);
-            return Utility.getApiResponse(200, Utility.objectMapper.writeValueAsString(dto), Utility.getHeaders());
+            LOGGER.info("Katalog aktualisiert: {}", id);
+            return Utility.getApiResponse(200, Utility.objectMapper.writeValueAsString(mapToDTO(updated)), Utility.getHeaders());
 
         } catch (Exception e) {
             LOGGER.error("Fehler beim Aktualisieren des Katalogs: {}", e.getMessage(), e);
             return Utility.getApiResponse(500, "{\"message\": \"" + e.getMessage() + "\"}", Utility.getHeaders());
         }
+    }
+
+    private CatalogDTO mapToDTO(Catalog catalog) {
+        return new CatalogDTO(
+                KeyHelper.extractId(catalog.getSortKey()),
+                catalog.getName(), catalog.getDescription(), catalog.getColor(),
+                catalog.getProductCount() != null ? catalog.getProductCount() : 0,
+                catalog.getCreatedAt(), catalog.getUpdatedAt()
+        );
     }
 }

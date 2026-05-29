@@ -2,6 +2,7 @@ package com.sakai.inventory.api.model;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
@@ -49,6 +50,12 @@ public class Catalog {
         this.sortKey = sortKey;
     }
 
+    /**
+     * catalogId wird NICHT in DynamoDB gespeichert.
+     * Sie ist die UUID aus dem letzten Segment des sortKey und wird
+     * von KeyHelper.extractId(sortKey) abgeleitet.
+     */
+    @DynamoDbIgnore
     public String getCatalogId() {
         return catalogId;
     }

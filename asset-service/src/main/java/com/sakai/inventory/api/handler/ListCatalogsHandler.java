@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.api.dto.CatalogDTO;
 import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.infrastructure.KeyHelper;
 import com.sakai.inventory.api.model.Catalog;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,9 +20,11 @@ import java.util.List;
 
 /**
  * BE-11: GET /catalogs
- * Gibt alle Kataloge zurück inkl. productCount (Statistik-Aggregation).
- * productCount wird direkt auf dem Katalog-Item gespeichert und bei
- * Zuweisung/Entfernung von Artikeln aktualisiert.
+ * Gibt alle Kataloge zurück inkl. productCount.
+ *
+ * Catalog-sortKey-Format in DB: CATALOGS#<NAME>#METADATA#<uuid>
+ * Die UUID (letztes Segment) ist die API-seitige catalogId.
+ * Das `catalogId`-Attribut wird nicht in DynamoDB gespeichert — es wird aus dem sortKey extrahiert.
  */
 public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -34,11 +37,9 @@ public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyReques
             DynamoDbTable<Catalog> table = DynamoDbClientFactory.getEnhancedClient()
                     .table(TABLE_NAME, TableSchema.fromBean(Catalog.class));
 
-            QueryConditional query = QueryConditional.keyEqualTo(
-                    Key.builder().partitionValue("CATALOGS").build()
-            );
-
-            List<CatalogDTO> result = table.query(query)
+            List<CatalogDTO> result = table.query(QueryConditional.keyEqualTo(
+                            Key.builder().partitionValue("CATALOGS").build()
+                    ))
                     .items()
                     .stream()
                     .map(this::mapToDTO)
@@ -54,8 +55,10 @@ public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyReques
     }
 
     private CatalogDTO mapToDTO(Catalog catalog) {
+        // catalogId aus sortKey extrahieren (letztes Segment nach '#')
+        String catalogId = KeyHelper.extractId(catalog.getSortKey());
         return new CatalogDTO(
-                catalog.getCatalogId(),
+                catalogId,
                 catalog.getName(),
                 catalog.getDescription(),
                 catalog.getColor(),
