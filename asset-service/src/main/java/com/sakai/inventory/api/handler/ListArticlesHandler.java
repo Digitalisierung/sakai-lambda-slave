@@ -6,17 +6,17 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sakai.inventory.api.dto.ArticleDTO;
+import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
 import com.sakai.inventory.api.model.Article;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import utility.Utility;
 
 import java.util.ArrayList;
@@ -25,98 +25,125 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The ListArticlesHandler class implements the AWS Lambda RequestHandler interface to process a
- * request and provide a response for listing articles. It fetches, maps, and returns article data in JSON format.
+ * BE-06: GET /articles
+ * Gibt alle Artikel zurück. Unterstützt folgende Query-Parameter zur Filterung:
+ *   - name:      Teiltext-Suche im Namen (case-insensitiv)
+ *   - state:     Exakter Statuswert (z.B. AVAILABLE, SOLD)
+ *   - catalogId: Filtert nach Katalog-ID
+ *   - sku:       Exakte SKU-Suche
  */
 public class ListArticlesHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
     private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
+    private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
     public ListArticlesHandler() {
-        LOGGER.info("ListArticlesHandler constructor");
+        LOGGER.info("ListArticlesHandler initialisiert.");
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent s, Context context) {
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
-        response.setHeaders(headers);
-
-
-        DynamoDbClient dbClient = DynamoDbClient.builder()
-                .httpClientBuilder(AwsCrtHttpClient.builder())
-                .region(Region.EU_CENTRAL_1)
-//                .credentialsProvider(
-//                        StaticCredentialsProvider.create(
-//                                AwsBasicCredentials.builder()
-//                                        .accessKeyId("test")
-//                                        .secretAccessKey("test")
-//                                        .build()
-//                        )
-//                )
-                .build();
-
-        DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
-                .dynamoDbClient(dbClient)
-                .build();
-
-        DynamoDbTable<Article> articleTable = enhancedClient.table(
-                System.getenv("TABLE_NAME"),
-                TableSchema.fromBean(Article.class)
-        );
-
-        QueryConditional query = QueryConditional.keyEqualTo(
-                Key.builder()
-                        .partitionValue("ARTICLES")
-                        .build()
-        );
-        List<Article> articlesList = articleTable.query(query)
-                .items()
-                .stream()
-                .toList();
-
-        LOGGER.info("Number of Articles: {}", articlesList.size());
-
-        List<ArticleDTO> articleDTOs = mapArticles(articlesList);
-
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
-            response.setBody(Utility.objectMapper.writeValueAsString(articleDTOs));
-            response.setStatusCode(200);
-            LOGGER.info("GetCatalogsHandler request successful");
+            Map<String, String> queryParams = request.getQueryStringParameters();
+
+            DynamoDbTable<Article> table = DynamoDbClientFactory.getEnhancedClient()
+                    .table(TABLE_NAME, TableSchema.fromBean(Article.class));
+
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(
+                    Key.builder().partitionValue("ARTICLES").build()
+            );
+
+            QueryEnhancedRequest.Builder queryBuilder = QueryEnhancedRequest.builder()
+                    .queryConditional(queryConditional);
+
+            // Filter-Expression aufbauen, wenn Query-Parameter vorhanden
+            if (queryParams != null && !queryParams.isEmpty()) {
+                buildFilterExpression(queryParams, queryBuilder);
+            }
+
+            List<Article> articles = table.query(queryBuilder.build())
+                    .items()
+                    .stream()
+                    .toList();
+
+            LOGGER.info("Anzahl gefundener Artikel: {}", articles.size());
+
+            List<ArticleDTO> result = mapArticles(articles);
+            String body = Utility.objectMapper.writeValueAsString(result);
+            return Utility.getApiResponse(200, body, Utility.getHeaders());
+
         } catch (JsonProcessingException e) {
-            response.setStatusCode(500);
-            response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
-            LOGGER.error(e.getMessage(), e);
+            LOGGER.error("JSON-Fehler: {}", e.getMessage(), e);
+            return Utility.getApiResponse(500, "{\"message\": \"Interner Fehler beim Serialisieren.\"}", Utility.getHeaders());
         } catch (Exception e) {
-            response.setStatusCode(500);
-            response.setBody("{\"message\": \"" + e.getMessage() + "\"}");
-            LOGGER.error(e.getMessage(), e);
+            LOGGER.error("Unerwarteter Fehler: {}", e.getMessage(), e);
+            return Utility.getApiResponse(500, "{\"message\": \"" + e.getMessage() + "\"}", Utility.getHeaders());
+        }
+    }
+
+    /**
+     * Baut eine DynamoDB FilterExpression aus den Query-Parametern.
+     * Hinweis: DynamoDB liest zuerst alle Daten und filtert dann — kein Index-Scan.
+     * Für Produktion mit großen Datenmengen empfiehlt sich ein GSI oder OpenSearch.
+     */
+    private void buildFilterExpression(Map<String, String> queryParams,
+                                       QueryEnhancedRequest.Builder queryBuilder) {
+        List<String> conditions = new ArrayList<>();
+        Map<String, AttributeValue> expressionValues = new HashMap<>();
+        Map<String, String> expressionNames = new HashMap<>();
+
+        if (queryParams.containsKey("state")) {
+            conditions.add("#state = :state");
+            expressionNames.put("#state", "state");
+            expressionValues.put(":state", AttributeValue.fromS(queryParams.get("state")));
         }
 
+        if (queryParams.containsKey("catalogId")) {
+            conditions.add("catalogId = :catalogId");
+            expressionValues.put(":catalogId", AttributeValue.fromS(queryParams.get("catalogId")));
+        }
 
-        return response;
+        if (queryParams.containsKey("sku")) {
+            conditions.add("sku = :sku");
+            expressionValues.put(":sku", AttributeValue.fromS(queryParams.get("sku")));
+        }
+
+        if (queryParams.containsKey("name")) {
+            conditions.add("contains(#name, :name)");
+            expressionNames.put("#name", "name");
+            expressionValues.put(":name", AttributeValue.fromS(queryParams.get("name")));
+        }
+
+        if (!conditions.isEmpty()) {
+            Expression.Builder expressionBuilder = Expression.builder()
+                    .expression(String.join(" AND ", conditions))
+                    .expressionValues(expressionValues);
+            if (!expressionNames.isEmpty()) {
+                expressionBuilder.expressionNames(expressionNames);
+            }
+            queryBuilder.filterExpression(expressionBuilder.build());
+        }
     }
 
     private List<ArticleDTO> mapArticles(List<Article> articles) {
-        List<ArticleDTO> articleDTOS = new ArrayList<>();
-
+        List<ArticleDTO> result = new ArrayList<>();
         for (Article article : articles) {
-            articleDTOS.add(new ArticleDTO(
+            result.add(new ArticleDTO(
                     article.getSortKey(),
                     article.getName(),
                     article.getSku(),
                     article.getDescription(),
-                    article.getPrice().toString(),
-                    article.getStock().longValue(),
+                    article.getPrice() != null ? article.getPrice().toString() : null,
+                    article.getStock() != null ? article.getStock().longValue() : null,
                     article.getImageUrl(),
                     article.getCatalogId(),
                     true,
-                    true,
+                    article.getFeatured(),
                     new HashMap<>(),
                     article.getCreatedAt(),
-                    article.getUpdatedAt()));
+                    article.getUpdatedAt()
+            ));
         }
-
-        return articleDTOS;
+        return result;
     }
 }

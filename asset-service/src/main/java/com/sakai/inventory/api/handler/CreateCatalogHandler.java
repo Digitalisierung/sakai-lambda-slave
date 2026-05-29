@@ -1,0 +1,88 @@
+package com.sakai.inventory.api.handler;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.sakai.inventory.api.dto.CatalogDTO;
+import com.sakai.inventory.api.dto.CreateCatalogRequest;
+import com.sakai.inventory.api.infrastructure.DynamoDbClientFactory;
+import com.sakai.inventory.api.model.Catalog;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import utility.Utility;
+
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * BE-13: POST /catalogs
+ * Erstellt einen neuen Katalog.
+ * Pflichtfelder mit Validierung: name (nicht leer), color (gültiges Hex-Format #RRGGBB).
+ */
+public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOGGER = LogManager.getLogger(CreateCatalogHandler.class);
+    private static final String TABLE_NAME = System.getenv("TABLE_NAME");
+
+    // Einfache Hex-Farb-Validierung: #RGB oder #RRGGBB
+    private static final java.util.regex.Pattern COLOR_PATTERN =
+            java.util.regex.Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
+
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
+        try {
+            String body = request.getBody();
+            if (body == null || body.isBlank()) {
+                return Utility.getApiResponse(400, "{\"message\": \"Request-Body fehlt.\"}", Utility.getHeaders());
+            }
+
+            CreateCatalogRequest req = Utility.objectMapper.readValue(body, CreateCatalogRequest.class);
+
+            // Pflichtfeldvalidierung
+            if (req.name() == null || req.name().isBlank()) {
+                return Utility.getApiResponse(400, "{\"message\": \"Pflichtfeld 'name' fehlt.\"}", Utility.getHeaders());
+            }
+            if (req.color() == null || req.color().isBlank()) {
+                return Utility.getApiResponse(400, "{\"message\": \"Pflichtfeld 'color' fehlt.\"}", Utility.getHeaders());
+            }
+            if (!COLOR_PATTERN.matcher(req.color()).matches()) {
+                return Utility.getApiResponse(400,
+                        "{\"message\": \"'color' muss ein gültiger Hex-Farbcode sein (z.B. #FF5733).\"}",
+                        Utility.getHeaders());
+            }
+
+            String catalogId = UUID.randomUUID().toString();
+            String now = Instant.now().toString();
+
+            Catalog catalog = new Catalog();
+            catalog.setPartitionKey("CATALOGS");
+            catalog.setSortKey("CAT#" + catalogId);
+            catalog.setCatalogId(catalogId);
+            catalog.setName(req.name());
+            catalog.setDescription(req.description());
+            catalog.setColor(req.color());
+            catalog.setProductCount(0);
+            catalog.setCreatedAt(now);
+            catalog.setUpdatedAt(now);
+
+            DynamoDbTable<Catalog> table = DynamoDbClientFactory.getEnhancedClient()
+                    .table(TABLE_NAME, TableSchema.fromBean(Catalog.class));
+            table.putItem(catalog);
+
+            LOGGER.info("Neuer Katalog erstellt: {}", catalogId);
+
+            CatalogDTO dto = new CatalogDTO(
+                    catalog.getCatalogId(), catalog.getName(), catalog.getDescription(),
+                    catalog.getColor(), 0, catalog.getCreatedAt(), catalog.getUpdatedAt()
+            );
+            return Utility.getApiResponse(201, Utility.objectMapper.writeValueAsString(dto), Utility.getHeaders());
+
+        } catch (Exception e) {
+            LOGGER.error("Fehler beim Erstellen des Katalogs: {}", e.getMessage(), e);
+            return Utility.getApiResponse(500, "{\"message\": \"" + e.getMessage() + "\"}", Utility.getHeaders());
+        }
+    }
+}

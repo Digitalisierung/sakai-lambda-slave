@@ -15,21 +15,8 @@ public class RequestBuilder {
     }
 
     public PutItemResponse buildItemResponse(Map jsonMap){
-        //Map<String, AttributeValue> dynDbMap = DynDbMapper.MAPPER.convertToDynDbMap(jsonMap);
-
-        final PutItemRequest putItemRequest = PutItemRequest.builder()
-                .tableName(TABLE_NAME)
-                //.item(dynDbMap)
-                .build();
-
-        final DynamoDbClient ddbClient = DynamoDbClient.builder()
-                .region(Region.EU_CENTRAL_1)
-                .build();
-
-        try (ddbClient) {
-            return ddbClient.putItem(putItemRequest);
-        } catch (Exception e) {
-            return null;
-        }
+        // TODO: DynDbMapper muss wieder eingebunden werden, damit .item(...) befüllt werden kann.
+        // Solange item() fehlt, lehnt AWS die Anfrage mit ValidationException ab.
+        throw new UnsupportedOperationException("buildItemResponse ist nicht funktionsfähig: item()-Mapping fehlt.");
     }
 }

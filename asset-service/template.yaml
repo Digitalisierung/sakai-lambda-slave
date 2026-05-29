@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Serverless application template for asset service.
+
 Globals:
   Function:
     Timeout: 20
@@ -8,21 +9,34 @@ Globals:
     Runtime: java21
     Architectures:
       - x86_64
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref InventoryTable
+        REGION: !Ref AWS::Region
 
 Resources:
-  ArticlesApi:
+
+  #########################################
+  # API Gateway
+  #########################################
+  InventoryApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
       EndpointConfiguration:
         Type: REGIONAL
-      Name:
-        !Sub '${AWS::StackName}-articles-api'
+      Name: !Sub '${AWS::StackName}-inventory-api'
       Cors:
         AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
-        AllowMethods: "'GET,OPTIONS'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
         AllowOrigin: "'*'"
-  ListArticlesHandlerServiceRole:
+
+  #########################################
+  # IAM Roles
+  #########################################
+
+  # Lesende Rolle — für List* und Get* Handler
+  ReadOnlyRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -35,7 +49,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: DynamoDbAccess
+        - PolicyName: DynamoDbReadOnly
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -44,39 +58,245 @@ Resources:
                   - dynamodb:DescribeTable
                   - dynamodb:Query
                   - dynamodb:Scan
+                  - dynamodb:GetItem
                 Resource:
-                  - !GetAtt InventoryCatalogs.Arn
-                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+                  - !GetAtt InventoryTable.Arn
+                  - !Sub '${InventoryTable.Arn}/index/*'
+
+  # Schreibende Rolle — für Create*, Update*, Delete*, Assign*, Remove* Handler
+  ReadWriteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbReadWrite
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - !GetAtt InventoryTable.Arn
+                  - !Sub '${InventoryTable.Arn}/index/*'
+
+  #########################################
+  # Article Handler
+  #########################################
+
+  # BE-06: GET /articles
   ListArticlesHandler:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
       Handler: com.sakai.inventory.api.handler.ListArticlesHandler::handleRequest
-      Role: !GetAtt ListArticlesHandlerServiceRole.Arn
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref InventoryCatalogs
-          REGION: !Ref AWS::Region
+      Role: !GetAtt ReadOnlyRole.Arn
       Events:
-        ApiUnit:
+        ApiEvent:
           Type: Api
           Properties:
             Path: /articles
             Method: get
-            RestApiId: !Ref ArticlesApi
+            RestApiId: !Ref InventoryApi
+
+  # BE-07: GET /articles/{id}
+  GetArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.GetArticleHandler::handleRequest
+      Role: !GetAtt ReadOnlyRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /articles/{id}
+            Method: get
+            RestApiId: !Ref InventoryApi
+
+  # BE-08: POST /articles
+  CreateArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.CreateArticleHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /articles
+            Method: post
+            RestApiId: !Ref InventoryApi
+
+  # BE-09: PUT /articles/{id}
+  UpdateArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.UpdateArticleHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /articles/{id}
+            Method: put
+            RestApiId: !Ref InventoryApi
+
+  # BE-10: DELETE /articles/{id}
+  DeleteArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.DeleteArticleHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /articles/{id}
+            Method: delete
+            RestApiId: !Ref InventoryApi
+
+  #########################################
+  # Catalog Handler
+  #########################################
+
+  # BE-11: GET /catalogs
+  ListCatalogsHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.ListCatalogsHandler::handleRequest
+      Role: !GetAtt ReadOnlyRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs
+            Method: get
+            RestApiId: !Ref InventoryApi
+
+  # BE-12: GET /catalogs/{id}
+  GetCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.GetCatalogHandler::handleRequest
+      Role: !GetAtt ReadOnlyRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}
+            Method: get
+            RestApiId: !Ref InventoryApi
+
+  # BE-13: POST /catalogs
+  CreateCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.CreateCatalogHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs
+            Method: post
+            RestApiId: !Ref InventoryApi
+
+  # BE-14: PUT /catalogs/{id}
+  UpdateCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.UpdateCatalogHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}
+            Method: put
+            RestApiId: !Ref InventoryApi
+
+  # BE-15: DELETE /catalogs/{id}
+  DeleteCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.DeleteCatalogHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}
+            Method: delete
+            RestApiId: !Ref InventoryApi
+
+  #########################################
+  # Relationen & Zuweisungen
+  #########################################
+
+  # BE-16: POST /catalogs/{id}/articles
+  AssignArticleToCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.AssignArticleToCatalogHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}/articles
+            Method: post
+            RestApiId: !Ref InventoryApi
+
+  # BE-17: DELETE /catalogs/{id}/articles/{articleId}
+  RemoveArticleFromCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.RemoveArticleFromCatalogHandler::handleRequest
+      Role: !GetAtt ReadWriteRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}/articles/{articleId}
+            Method: delete
+            RestApiId: !Ref InventoryApi
 
   #########################################
   # DynamoDB Table
   #########################################
-  InventoryCatalogs:
+  InventoryTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName:
-        !Sub '${AWS::StackName}-inventory-catalogs'
+      TableName: !Sub '${AWS::StackName}-inventory'
       BillingMode: PAY_PER_REQUEST
       PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true # Das ist Backup der Datenbank. Relevant nur für Prod.
-      TimeToLiveSpecification: ## AWS sagt, wenn Daten länger als maximal 12 Monate nicht angerürt wurden, sollten diese irgendwo anders gespeichert werden - nicht in DynamoDB, sondern in S3, zum Beispiel. Dafür ist TTL da. Keine Pflicht, aber AWS Recomendation.
+        PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
       AttributeDefinitions:
@@ -98,16 +318,17 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+
 Outputs:
   ApiEndpoint:
-    Description: API Gateway endpoint URL for Prod stage for GetCatalogs function.
-    Value: !Sub 'http://localhost:4566/restapis/${ArticlesApi}/Prod/_user_request_/articles'
-  ListArticlesHandlerArn:
-    Description: ListArticlesHandler Lambda Function ARN.
-    Value: !GetAtt ListArticlesHandler.Arn
-  ListArticlesHandlerIamRole:
-    Description: Implicit IAM Role created for ListArticlesHandler function.
-    Value: !GetAtt ListArticlesHandler.Arn
+    Description: API Gateway Basis-URL (Prod Stage)
+    Value: !Sub 'https://${InventoryApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+  ArticlesEndpoint:
+    Description: Endpunkt für Articles
+    Value: !Sub 'https://${InventoryApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/articles'
+  CatalogsEndpoint:
+    Description: Endpunkt für Catalogs
+    Value: !Sub 'https://${InventoryApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/catalogs'
   DynamoDbTableName:
-    Description: Name of DynamoDB table.
-    Value: !Ref InventoryCatalogs
+    Description: Name der DynamoDB-Tabelle
+    Value: !Ref InventoryTable
