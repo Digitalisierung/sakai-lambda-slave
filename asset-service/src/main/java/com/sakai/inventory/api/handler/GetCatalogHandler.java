@@ -26,6 +26,14 @@ public class GetCatalogHandler implements RequestHandler<APIGatewayProxyRequestE
     private static final Logger LOGGER = LogManager.getLogger(GetCatalogHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende GET /catalogs/{id} Anfragen.
+     * Sucht den Katalog anhand der UUID via Query + contains-Filter.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit dem Pfadparameter "id"
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 mit dem gefundenen Katalog, 400 bei fehlender ID, 404 wenn nicht gefunden, 500 bei Fehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
@@ -53,6 +61,13 @@ public class GetCatalogHandler implements RequestHandler<APIGatewayProxyRequestE
         }
     }
 
+    /**
+     * Wandelt ein Catalog-Datenbankobjekt in ein CatalogDTO für die API-Antwort um.
+     * Die catalogId wird aus dem letzten Segment des sortKey extrahiert.
+     *
+     * @param catalog das aus DynamoDB gelesene Catalog-Objekt
+     * @return das befüllte CatalogDTO-Objekt
+     */
     private CatalogDTO mapToDTO(Catalog catalog) {
         return new CatalogDTO(
                 KeyHelper.extractId(catalog.getSortKey()),

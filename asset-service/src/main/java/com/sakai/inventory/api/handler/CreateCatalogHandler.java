@@ -32,6 +32,16 @@ public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyReque
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
     private static final Pattern COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
 
+    /**
+     * Verarbeitet eingehende POST /catalogs Anfragen.
+     * Validiert Pflichtfelder (name, color) und das Hex-Format des Farbcodes.
+     * Generiert eine UUID als ID und baut den sortKey nach dem Format
+     * "CATALOGS#&lt;NAME_GROSS&gt;#METADATA#&lt;uuid&gt;" auf.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit dem JSON-Body
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 201 mit dem erstellten Katalog, 400 bei Validierungsfehlern, 500 bei Systemfehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {

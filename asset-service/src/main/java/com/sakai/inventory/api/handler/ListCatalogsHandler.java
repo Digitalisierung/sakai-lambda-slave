@@ -31,6 +31,15 @@ public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyReques
     private static final Logger LOGGER = LogManager.getLogger(ListCatalogsHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende GET /catalogs Anfragen.
+     * Liest alle Kataloge aus DynamoDB (partitionKey = "CATALOGS") und
+     * gibt sie als DTO-Liste zurück. Der productCount wird direkt aus dem Datenbankeintrag gelesen.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 mit JSON-Liste aller Kataloge, oder 500 bei einem Fehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
@@ -54,6 +63,14 @@ public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyReques
         }
     }
 
+    /**
+     * Wandelt ein Catalog-Datenbankobjekt in ein CatalogDTO für die API-Antwort um.
+     * Die API-seitige catalogId wird aus dem letzten Segment des sortKey extrahiert,
+     * da sie nicht als eigenes Attribut in DynamoDB gespeichert ist.
+     *
+     * @param catalog das aus DynamoDB gelesene Catalog-Objekt
+     * @return das befüllte CatalogDTO-Objekt
+     */
     private CatalogDTO mapToDTO(Catalog catalog) {
         // catalogId aus sortKey extrahieren (letztes Segment nach '#')
         String catalogId = KeyHelper.extractId(catalog.getSortKey());

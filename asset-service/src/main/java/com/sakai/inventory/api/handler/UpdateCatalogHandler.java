@@ -32,6 +32,15 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
     private static final Pattern COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
 
+    /**
+     * Verarbeitet eingehende PUT /catalogs/{id} Anfragen (Partial Update).
+     * Sucht den Katalog anhand der UUID, validiert optional den Farbcode
+     * und überschreibt nur die im Body gesetzten Felder (ignoreNulls = true).
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit Pfadparameter "id" und JSON-Body
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 mit dem aktualisierten Katalog, 400/404 bei Fehlern, 500 bei Systemfehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
@@ -90,6 +99,13 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
+    /**
+     * Wandelt ein Catalog-Datenbankobjekt in ein CatalogDTO für die API-Antwort um.
+     * Die catalogId wird aus dem letzten Segment des sortKey extrahiert.
+     *
+     * @param catalog das aus DynamoDB gelesene Catalog-Objekt
+     * @return das befüllte CatalogDTO-Objekt
+     */
     private CatalogDTO mapToDTO(Catalog catalog) {
         return new CatalogDTO(
                 KeyHelper.extractId(catalog.getSortKey()),

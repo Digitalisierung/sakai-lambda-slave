@@ -34,6 +34,16 @@ public class AssignArticleToCatalogHandler implements RequestHandler<APIGatewayP
     private static final Logger LOGGER = LogManager.getLogger(AssignArticleToCatalogHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende POST /catalogs/{id}/articles Anfragen.
+     * Prüft die Existenz von Katalog und Artikel, setzt die catalogId am Artikel-Item
+     * und erhöht den productCount am Katalog-Item atomisch um 1.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit Pfadparameter "id"
+     *                und JSON-Body mit "articleId"
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 bei erfolgreicher Zuweisung, 400/404 bei Fehlern, 500 bei Systemfehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {

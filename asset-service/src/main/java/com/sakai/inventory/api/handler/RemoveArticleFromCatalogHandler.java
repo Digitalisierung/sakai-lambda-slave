@@ -33,6 +33,15 @@ public class RemoveArticleFromCatalogHandler implements RequestHandler<APIGatewa
     private static final Logger LOGGER = LogManager.getLogger(RemoveArticleFromCatalogHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende DELETE /catalogs/{id}/articles/{articleId} Anfragen.
+     * Prüft die Existenz von Katalog und Artikel sowie deren Zugehörigkeit zueinander.
+     * Leert die catalogId am Artikel-Item und verringert den productCount am Katalog (minimum 0).
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit den Pfadparametern "id" und "articleId"
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 bei erfolgreichem Entfernen, 400/404 bei Fehlern, 500 bei Systemfehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {

@@ -38,6 +38,15 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
     private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende GET /articles Anfragen.
+     * Liest alle Artikel aus DynamoDB (partitionKey = "ARTICLES") und wendet
+     * optionale Filterausdrücke auf Basis der Query-Parameter an.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 mit JSON-Liste der Artikel, oder 500 bei einem Fehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
@@ -74,6 +83,15 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         }
     }
 
+    /**
+     * Baut eine DynamoDB FilterExpression aus den übergebenen Query-Parametern auf.
+     * Unterstützte Parameter: state (exakter Vergleich), catalogId (exakter Vergleich),
+     * sku (exakter Vergleich), name (contains-Suche).
+     * Mehrere Parameter werden mit AND verknüpft.
+     *
+     * @param queryParams  die Query-Parameter aus dem HTTP-Request
+     * @param queryBuilder der QueryEnhancedRequest-Builder, dem der Filter hinzugefügt wird
+     */
     private void buildFilterExpression(Map<String, String> queryParams,
                                        QueryEnhancedRequest.Builder queryBuilder) {
         List<String> conditions = new ArrayList<>();
@@ -110,6 +128,13 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         }
     }
 
+    /**
+     * Wandelt ein Article-Datenbankobjekt in ein ArticleDTO für die API-Antwort um.
+     * Die API-seitige ID wird dabei aus dem letzten Segment des sortKey extrahiert.
+     *
+     * @param article das aus DynamoDB gelesene Article-Objekt
+     * @return das befüllte ArticleDTO-Objekt
+     */
     private ArticleDTO mapToDTO(Article article) {
         // UUID aus sortKey extrahieren (letztes Segment nach '#')
         String id = KeyHelper.extractId(article.getSortKey());

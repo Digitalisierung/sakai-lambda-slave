@@ -31,6 +31,15 @@ public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyReque
     private static final Logger LOGGER = LogManager.getLogger(UpdateArticleHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende PUT /articles/{id} Anfragen (Partial Update).
+     * Sucht den Artikel anhand der UUID, übernimmt nur die im Body gesetzten Felder
+     * und aktualisiert den Zeitstempel "updatedAt" automatisch.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit Pfadparameter "id" und JSON-Body
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 mit dem aktualisierten Artikel, 400/404 bei Fehlern, 500 bei Systemfehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
@@ -92,6 +101,13 @@ public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
+    /**
+     * Wandelt ein Article-Datenbankobjekt in ein ArticleDTO für die API-Antwort um.
+     * Die API-seitige ID wird aus dem letzten Segment des sortKey extrahiert.
+     *
+     * @param article das aus DynamoDB gelesene Article-Objekt
+     * @return das befüllte ArticleDTO-Objekt
+     */
     private ArticleDTO mapToDTO(Article article) {
         return new ArticleDTO(
                 KeyHelper.extractId(article.getSortKey()),

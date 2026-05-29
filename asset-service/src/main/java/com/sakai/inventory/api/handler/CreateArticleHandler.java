@@ -31,6 +31,15 @@ public class CreateArticleHandler implements RequestHandler<APIGatewayProxyReque
     private static final Logger LOGGER = LogManager.getLogger(CreateArticleHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende POST /articles Anfragen.
+     * Validiert Pflichtfelder (name, sku), generiert eine UUID als ID,
+     * setzt den Initialstatus auf "AVAILABLE" und schreibt den neuen Artikel in DynamoDB.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit dem JSON-Body
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 201 mit dem erstellten Artikel, 400 bei Validierungsfehlern, 500 bei Fehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {

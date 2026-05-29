@@ -27,6 +27,15 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
     private static final Logger LOGGER = LogManager.getLogger(GetArticleHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende GET /articles/{id} Anfragen.
+     * Sucht den Artikel anhand der UUID via Query + contains-Filter,
+     * da der vollständige sortKey aus der ID allein nicht rekonstruiert werden kann.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit dem Pfadparameter "id"
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 200 mit dem gefundenen Artikel, 400 bei fehlender ID, 404 wenn nicht gefunden, 500 bei Fehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
@@ -56,6 +65,13 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
         }
     }
 
+    /**
+     * Wandelt ein Article-Datenbankobjekt in ein ArticleDTO für die API-Antwort um.
+     * Die API-seitige ID wird dabei aus dem letzten Segment des sortKey extrahiert.
+     *
+     * @param article das aus DynamoDB gelesene Article-Objekt
+     * @return das befüllte ArticleDTO-Objekt
+     */
     private ArticleDTO mapToDTO(Article article) {
         return new ArticleDTO(
                 KeyHelper.extractId(article.getSortKey()),

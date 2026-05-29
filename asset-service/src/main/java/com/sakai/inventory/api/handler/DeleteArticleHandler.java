@@ -26,6 +26,15 @@ public class DeleteArticleHandler implements RequestHandler<APIGatewayProxyReque
     private static final Logger LOGGER = LogManager.getLogger(DeleteArticleHandler.class);
     private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
+    /**
+     * Verarbeitet eingehende DELETE /articles/{id} Anfragen.
+     * Sucht den Artikel anhand der UUID, ermittelt den vollständigen sortKey
+     * und löscht das Item aus DynamoDB.
+     *
+     * @param request das eingehende API-Gateway-Request-Objekt mit dem Pfadparameter "id"
+     * @param context der Lambda-Ausführungskontext
+     * @return HTTP 204 bei erfolgreichem Löschen, 400/404 bei Fehlern, 500 bei Systemfehler
+     */
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
