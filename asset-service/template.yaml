@@ -11,7 +11,7 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        TABLE_NAME: !Ref InventoryTable
+        TABLE_NAME: InventoryTable-Dev
         REGION: !Ref AWS::Region
 
 Resources:
@@ -60,8 +60,7 @@ Resources:
                   - dynamodb:Scan
                   - dynamodb:GetItem
                 Resource:
-                  - !GetAtt InventoryTable.Arn
-                  - !Sub '${InventoryTable.Arn}/index/*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/InventoryTable-Dev'
 
   # Schreibende Rolle — für Create*, Update*, Delete*, Assign*, Remove* Handler
   ReadWriteRole:
@@ -91,8 +90,7 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                 Resource:
-                  - !GetAtt InventoryTable.Arn
-                  - !Sub '${InventoryTable.Arn}/index/*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/InventoryTable-Dev'
 
   #########################################
   # Article Handler
@@ -286,38 +284,8 @@ Resources:
             Method: delete
             RestApiId: !Ref InventoryApi
 
-  #########################################
-  # DynamoDB Table
-  #########################################
-  InventoryTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub '${AWS::StackName}-inventory'
-      BillingMode: PAY_PER_REQUEST
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
-      AttributeDefinitions:
-        - AttributeName: partitionKey
-          AttributeType: S
-        - AttributeName: sortKey
-          AttributeType: S
-        - AttributeName: SKU
-          AttributeType: S
-      KeySchema:
-        - AttributeName: partitionKey
-          KeyType: HASH
-        - AttributeName: sortKey
-          KeyType: RANGE
-      GlobalSecondaryIndexes:
-        - IndexName: SKU-index
-          KeySchema:
-            - AttributeName: SKU
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
+  # Hinweis: Die DynamoDB-Tabelle wird von CDK verwaltet (InventoryTable-Dev).
+  # Sie wird hier NICHT neu erstellt — nur referenziert.
 
 Outputs:
   ApiEndpoint:
@@ -330,5 +298,5 @@ Outputs:
     Description: Endpunkt für Catalogs
     Value: !Sub 'https://${InventoryApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/catalogs'
   DynamoDbTableName:
-    Description: Name der DynamoDB-Tabelle
-    Value: !Ref InventoryTable
+    Description: Name der DynamoDB-Tabelle (CDK-verwaltet)
+    Value: InventoryTable-Dev
