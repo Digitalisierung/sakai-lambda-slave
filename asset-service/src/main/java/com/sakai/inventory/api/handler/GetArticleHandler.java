@@ -12,7 +12,7 @@ import utility.Utility;
 
 import java.util.Map;
 
-public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private CreateKhachiDao transactionDao;
 
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {

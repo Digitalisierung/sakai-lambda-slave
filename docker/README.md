@@ -325,3 +325,19 @@ sam local start-api --port 3000 --env-vars env.json
 - **Für Docker-Netzwerk auf Mac/Windows:** Nutze `host.docker.internal` statt `localhost` in deinem Java-Code
 - **Umgebungsvariablen:** Definiere alle AWS Credentials in `env.json`
 - **Debugging:** Nutze `--debug-port` mit SAM und verbinde deine IDE
+
+### URL
+
+http://2nf1weo8cx.execute-api.localhost.localstack.cloud:4566/Prod/catalogs
+
+http://<api-id>.execute-api.localhost.localstack.cloud:4566/Prod/<endpoint>
+
+id bekommt man mit `awslocal apigateway get-rest-apis`
+
+```bash
+awslocal build
+```
+
+```bash
+awslocal deploy --guided
+```
