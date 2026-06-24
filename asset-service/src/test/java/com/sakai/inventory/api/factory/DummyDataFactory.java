@@ -197,7 +197,6 @@ public class DummyDataFactory {
         article.setSku(sku);
         //article.setArticleId(articleId);
         article.setDescription(description);
-        article.setPrice(Integer.parseInt(price));
         article.setStock(inventory);
         article.setImageUrl(imageUrl);
         article.setState(state);
