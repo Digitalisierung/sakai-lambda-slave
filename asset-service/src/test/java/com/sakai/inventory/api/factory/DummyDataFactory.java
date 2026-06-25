@@ -1,7 +1,7 @@
 package com.sakai.inventory.api.factory;
 
-import com.sakai.inventory.api.model.Article;
-import com.sakai.inventory.api.model.DynamicFieldValue;
+import com.sakai.inventory.domain.model.Article;
+import com.sakai.inventory.domain.model.DynamicFieldValue;
 
 import java.util.HashMap;
 import java.util.List;

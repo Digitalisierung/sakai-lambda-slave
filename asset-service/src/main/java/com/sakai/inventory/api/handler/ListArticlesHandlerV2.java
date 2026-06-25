@@ -8,7 +8,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.sakai.inventory.api.dto.ArticleDTO;
 import com.sakai.inventory.api.dto.PaginatedArticlesResponseDTO;
-import com.sakai.inventory.api.model.Article;
+import com.sakai.inventory.domain.model.Article;
+import com.sakai.inventory.shared.util.Utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -21,7 +22,6 @@ import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import utility.Utility;
 
 import java.util.*;
 
@@ -37,7 +37,7 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
-        Map<String, String> header = Utility.getHeaders();
+        Map<String, String> header = Utility.createHeaders();
         header.put("Access-Control-Allow-Origin", "*"); // CORS falls benötigt
 
         // get Query Parameter
@@ -57,10 +57,10 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
                     result.nextToken != null
             );
             String responseString = Utility.objectMapper.writeValueAsString(responseDTO);
-            return Utility.getApiResponse(200, responseString, header);
+            return Utility.createApiResponse(200, responseString, header);
         } catch (Exception e) {
             LOGGER.error("Failed to list articles", e);
-            return Utility.getApiResponse(500, "{\"error\": \"Internal server error\"}", header);
+            return Utility.createApiResponse(500, "{\"error\": \"Internal server error\"}", header);
         }
     }
 

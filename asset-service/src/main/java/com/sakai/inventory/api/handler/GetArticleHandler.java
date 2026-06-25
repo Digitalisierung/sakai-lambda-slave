@@ -4,66 +4,44 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.sakai.inventory.domain.service.GetArticleService;
+import com.sakai.inventory.shared.util.Utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.*;
-import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
-import utility.Utility;
 
 import java.util.Map;
 
 public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(GetArticleHandler.class);
+
+    private final GetArticleService getArticleService;
 
     public GetArticleHandler() {
         super();
+        LOGGER.info("Initializing GetArticleService");
+        getArticleService = new GetArticleService();
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent apiRequest, Context context) {
-        //APIGatewayProxyResponseEvent apiResponse = new APIGatewayProxyResponseEvent();
-        Map<String, String> pathParameters = apiRequest.getPathParameters();
-        String id = pathParameters.get("id");
-        LOGGER.info("id {}", id);
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
+        LOGGER.info("Processing GET /articles/{id} request.");
 
-        //String requestBody = apiRequest.getBody();
-        //LOGGER.info("Request-Body: {}", requestBody);
-
-        // TODO: body validieren, ob JSON: wenn ja -> document
-
-        //EnhancedDocument document = EnhancedDocument.fromJson(requestBody);
-
-        //String id = document.getString("id");
-
-        DynamoDbEnhancedClient ddbClient = DynamoDbEnhancedClient.builder()
-                .build();
-
-        TableSchema<EnhancedDocument> tableSchema = TableSchema.documentSchemaBuilder()
-                .addIndexPartitionKey(TableMetadata.primaryIndexName(), "partitionKey", AttributeValueType.B)
-                .addIndexSortKey(TableMetadata.primaryIndexName(), "sortKey", AttributeValueType.B)
-                .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
-                .build();
-
-        DynamoDbTable<EnhancedDocument> table = ddbClient.table(System.getenv("TABLE_NAME"), tableSchema);
-
-        Key key = Key.builder()
-                .partitionValue("ARTICLES")
-                .sortValue("ARTICLES#SKU-030#" + id)
-                .build();
-
-        EnhancedDocument item = table.getItem(key);
-
-        Map<String, String> headers = Utility.getHeaders();
-
-        if (item == null) {
-            LOGGER.error("Item not found or null.");
-            return Utility.getApiResponse(404, "{\"error\": \"Item not found\"}", headers);
+        Map<String, String> pathParameters = requestEvent.getPathParameters();
+        if (pathParameters == null || !pathParameters.containsKey("id")) {
+            LOGGER.error("Missing 'id' path parameters.");
+            return Utility.createErrorResponse(400, "Missing article ID");
         }
 
-        String jsonBody = item.toJson();
+        try {
+            String articleId = pathParameters.get("id");
+            String article = getArticleService.findArticleById(articleId);
+            LOGGER.info("Fetching article by id: {}", articleId);
+            LOGGER.info("{}", article);
 
-
-        return Utility.getApiResponse(200, jsonBody, headers);
+            return Utility.createApiResponse(200, article, Utility.createHeaders());
+        } catch (Exception e) {
+            LOGGER.info(e.getMessage(), e);
+            return Utility.createErrorResponse(404, "Article not found");
+        }
     }
 }

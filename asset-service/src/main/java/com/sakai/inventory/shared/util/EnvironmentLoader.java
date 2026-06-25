@@ -1,18 +1,27 @@
-package utility;
+package com.sakai.inventory.shared.util;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
 public class EnvironmentLoader {
+    private static final Logger LOGGER = LoggerFactory.getLogger(EnvironmentLoader.class);
+
+    private EnvironmentLoader() {
+        super();
+    }
+
     public static String getEnv(String key) {
         if (key == null || key.isBlank()) {
-            throw new IllegalArgumentException("key must not be null or blank");
+            throw new IllegalArgumentException("Key must not be null or blank.");
         }
 
         String value = System.getenv(key);
         if (value == null || value.isBlank()) {
-            System.err.println("Environment variable " + key + " is not set");
+            LOGGER.error("Environment variable {} is not set.", key);
             return System.getProperty(key);
         }
         return value;
@@ -23,7 +32,9 @@ public class EnvironmentLoader {
             Properties properties = System.getProperties();
             InputStream resourceAsStream = EnvironmentLoader.class.getClassLoader().getResourceAsStream(".env");
             properties.load(resourceAsStream);
-            System.setProperties(properties); 
+            System.setProperties(properties);
+        } else {
+            LOGGER.error("USER environment variable is already defined.");
         }
     }
 }
