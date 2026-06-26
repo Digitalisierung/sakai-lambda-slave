@@ -6,7 +6,8 @@ import com.sakai.inventory.infrastructure.repository.ArticleRepository;
 import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
@@ -34,22 +35,15 @@ public class GetArticleService {
 
         try (DynamoDbClient client = DynamoDbFactory.createDynamoDbClient()) {
             DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient(client);
-            TableSchema<EnhancedDocument> tableSchema = createTableSchema();
-            articleRepository = new DynamoDbArticleRepository(enhancedClient, DynamoDbFactory.getTableName(), tableSchema);
+            TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+            String tableName = DynamoDbFactory.getTableName();
+            articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
             EnhancedDocument document = articleRepository.findById(id)
                     .orElseThrow();
             return document.toJson();
         } catch (Exception e) {
             LOGGER.error("Error", e);
-            throw new RuntimeException();
+            throw e;
         }
-    }
-
-    private TableSchema<EnhancedDocument> createTableSchema() {
-        return TableSchema.documentSchemaBuilder()
-                .addIndexPartitionKey(TableMetadata.primaryIndexName(), "partitionKey", AttributeValueType.S)
-                .addIndexSortKey(TableMetadata.primaryIndexName(), "sortKey", AttributeValueType.S)
-                .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
-                .build();
     }
 }

@@ -5,12 +5,19 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.domain.service.GetArticleService;
-import com.sakai.inventory.shared.util.Utility;
+import com.sakai.inventory.shared.exception.ExceptionHandler;
+import com.sakai.inventory.shared.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.util.Map;
 
+/**
+ * Lambda handler for getting a single article by ID.
+ * <p>
+ * GET /articles/{id}
+ */
 public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOGGER = LoggerFactory.getLogger(GetArticleHandler.class);
 
@@ -24,12 +31,12 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
-        LOGGER.info("Processing GET /articles/{id} request.");
+        LOGGER.info("Processing {} {} request.", requestEvent.getHttpMethod(), requestEvent.getPath());
 
         Map<String, String> pathParameters = requestEvent.getPathParameters();
         if (pathParameters == null || !pathParameters.containsKey("id")) {
             LOGGER.error("Missing 'id' path parameters.");
-            return Utility.createErrorResponse(400, "Missing article ID");
+            return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing article ID");
         }
 
         try {
@@ -38,10 +45,10 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
             LOGGER.info("Fetching article by id: {}", articleId);
             LOGGER.info("{}", article);
 
-            return Utility.createApiResponse(200, article, Utility.createHeaders());
+            return ResponseUtil.createApiResponse(HttpStatusCode.OK, article, ResponseUtil.createHeaders());
         } catch (Exception e) {
             LOGGER.info(e.getMessage(), e);
-            return Utility.createErrorResponse(404, "Article not found");
+            return ExceptionHandler.handleException(e);
         }
     }
 }

@@ -1,19 +1,13 @@
 package com.sakai.inventory.shared.util;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public final class Utility {
-    public static final ObjectMapper objectMapper;
+public final class ResponseUtil {
 
-    static {
-        objectMapper = new ObjectMapper();
-    }
-
-    private Utility() {
+    private ResponseUtil() {
         super();
     }
 

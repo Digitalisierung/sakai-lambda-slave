@@ -3,7 +3,8 @@ package com.sakai.inventory.infrastructure.factory;
 import com.sakai.inventory.shared.util.EnvironmentLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
@@ -67,5 +68,13 @@ public class DynamoDbFactory {
         }
 
         return tableName;
+    }
+
+    public static TableSchema<EnhancedDocument> createTableSchema() {
+        return TableSchema.documentSchemaBuilder()
+                .addIndexPartitionKey(TableMetadata.primaryIndexName(), "partitionKey", AttributeValueType.S)
+                .addIndexSortKey(TableMetadata.primaryIndexName(), "sortKey", AttributeValueType.S)
+                .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
+                .build();
     }
 }

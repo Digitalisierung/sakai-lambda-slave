@@ -7,9 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sakai.inventory.api.dto.ArticleDTO;
 import com.sakai.inventory.domain.model.Article;
-import com.sakai.inventory.shared.util.Utility;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.sakai.inventory.shared.util.ResponseUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -29,7 +29,7 @@ import java.util.Map;
  * request and provide a response for listing articles. It fetches, maps, and returns article data in JSON format.
  */
 public class ListArticlesHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private static final Logger LOGGER = LogManager.getLogger(ListArticlesHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesHandler.class);
 
     public ListArticlesHandler() {
         LOGGER.info("ListArticlesHandler constructor");
@@ -71,7 +71,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         List<ArticleDTO> articleDTOs = mapArticles(articlesList);
 
         try {
-            response.setBody(Utility.objectMapper.writeValueAsString(articleDTOs));
+            response.setBody(ResponseUtil.objectMapper.writeValueAsString(articleDTOs));
             response.setStatusCode(200);
             LOGGER.info("GetCatalogsHandler request successful");
         } catch (JsonProcessingException e) {

@@ -9,7 +9,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.sakai.inventory.api.dto.ArticleDTO;
 import com.sakai.inventory.api.dto.PaginatedArticlesResponseDTO;
 import com.sakai.inventory.domain.model.Article;
-import com.sakai.inventory.shared.util.Utility;
+import com.sakai.inventory.shared.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -37,7 +37,7 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
-        Map<String, String> header = Utility.createHeaders();
+        Map<String, String> header = ResponseUtil.createHeaders();
         header.put("Access-Control-Allow-Origin", "*"); // CORS falls benötigt
 
         // get Query Parameter
@@ -56,11 +56,11 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
                     articlesDTO.size(),
                     result.nextToken != null
             );
-            String responseString = Utility.objectMapper.writeValueAsString(responseDTO);
-            return Utility.createApiResponse(200, responseString, header);
+            String responseString = ResponseUtil.objectMapper.writeValueAsString(responseDTO);
+            return ResponseUtil.createApiResponse(200, responseString, header);
         } catch (Exception e) {
             LOGGER.error("Failed to list articles", e);
-            return Utility.createApiResponse(500, "{\"error\": \"Internal server error\"}", header);
+            return ResponseUtil.createApiResponse(500, "{\"error\": \"Internal server error\"}", header);
         }
     }
 
@@ -98,7 +98,7 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
             byte[] decoded = Base64.getDecoder().decode(token);
             String json = new String(decoded);
 
-            Map<String, String> value = Utility.objectMapper.readValue(json, new TypeReference<>() {
+            Map<String, String> value = ResponseUtil.objectMapper.readValue(json, new TypeReference<>() {
             });
             Map<String, AttributeValue> startPage = new HashMap<>();
 
@@ -141,7 +141,7 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
                     nextPage.put(entry.getKey(), attributeValue.n());
                 }
             }
-            String json = Utility.objectMapper.writeValueAsString(nextPage);
+            String json = ResponseUtil.objectMapper.writeValueAsString(nextPage);
             return Base64.getEncoder().encodeToString(json.getBytes());
         } catch (JsonProcessingException e) {
             LOGGER.error(e.getMessage(), e);
