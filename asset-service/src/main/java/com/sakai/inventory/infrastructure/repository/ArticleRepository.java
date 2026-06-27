@@ -1,7 +1,10 @@
 package com.sakai.inventory.infrastructure.repository;
 
+import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -12,8 +15,17 @@ public interface ArticleRepository {
     /**
      * Find article by its unique identifier.
      *
-     * @param id
+     * @param id equal partitionKey.
      * @return
      */
     Optional<EnhancedDocument> findById(String id);
+
+    /**
+     * Find all articles with pagination support.
+     *
+     * @param limit             Maximum number of articles to return.
+     * @param exclusiveStartKey DynamoDb pagination token (null for first page).
+     * @return PaginatedResult result with articles and next page token.
+     */
+    PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 }

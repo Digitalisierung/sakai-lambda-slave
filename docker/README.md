@@ -274,7 +274,7 @@ aws --endpoint-url=http://localhost:4566 cloudformation describe-stacks \
 aws --endpoint-url=http://localhost:4566 lambda create-function \
     --function-name GetCatalogsHandler \
     --runtime java21 \
-    --handler com.sakai.inventory.api.handler.ListArticlesHandler::handleRequest \
+    --handler com.sakai.inventory.api.handler.ListArticlesHandlerV1::handleRequest \
     --role arn:aws:iam::000000000000:role/lambda-role \
     --environment Variables="{DYNAMODB_ENDPOINT=http://localhost:4566,AWS_ACCESS_KEY_ID=test,AWS_SECRET_ACCESS_KEY=test,AWS_REGION=eu-central-1}" \
     --code S3Bucket="hot-reload",S3Key="/tmp/localstack/zipfile.jar"  # Vereinfacht

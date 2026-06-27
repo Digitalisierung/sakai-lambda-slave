@@ -18,16 +18,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Automatically generated tests for GetCatalogsHandler.")
 @Disabled
-class ListArticlesHandlerTest {
+class ListArticlesHandlerV1Test {
 
-    private ListArticlesHandler handler;
+    private ListArticlesHandlerV1 handler;
 
     @Mock
     private Context context;
 
     @BeforeEach
     void setUp() {
-        handler = new ListArticlesHandler();
+        handler = new ListArticlesHandlerV1();
     }
 
     @Test

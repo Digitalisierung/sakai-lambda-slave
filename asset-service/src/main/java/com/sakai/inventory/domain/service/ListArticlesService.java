@@ -1,0 +1,147 @@
+package com.sakai.inventory.domain.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.sakai.inventory.api.dto.PaginatedArticlesResponseDTO;
+import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
+import com.sakai.inventory.infrastructure.factory.PaginatedResult;
+import com.sakai.inventory.infrastructure.repository.ArticleRepository;
+import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
+import com.sakai.inventory.shared.util.JsonUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import java.util.*;
+
+public class ListArticlesService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
+
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
+
+    private ArticleRepository articleRepository;
+
+    public ListArticlesService() {
+        super();
+    }
+
+    public PaginatedArticlesResponseDTO listArticlesPaginated(int pageSize, String nextToken) {
+        LOGGER.info("Listing articles with: pageSize {}", pageSize);
+
+        int validatedPageSize = validatePageSize(pageSize);
+
+        Map<String, AttributeValue> exclusiveStartKey = decodeNextToken(nextToken);
+
+        List<String> articles = new ArrayList<>();
+
+        try (DynamoDbClient client = DynamoDbFactory.createDynamoDbClient()) {
+            DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient(client);
+            String tableName = DynamoDbFactory.getTableName();
+            TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+            articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
+            PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(validatedPageSize, exclusiveStartKey);
+
+            List<EnhancedDocument> items = paginatedResult.items();
+
+            for (EnhancedDocument document : items) {
+                String json = document.toJson();
+                articles.add(json);
+                LOGGER.info("Enhanced document (JSON):");
+                LOGGER.info("{}", json);
+            }
+
+            String encodedNextToken = encodeNextToken(paginatedResult.lastEvaluatedKey());
+
+            return new PaginatedArticlesResponseDTO(null, encodedNextToken, articles.size(), encodedNextToken != null);
+
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
+    /**
+     * Validate page size parameter.
+     *
+     * @param pageSize pagination page size.
+     * @return int
+     */
+    private int validatePageSize(Integer pageSize) {
+        if (pageSize == null) {
+            LOGGER.debug("No page size provided, use default.");
+            LOGGER.debug("Default page size: {}", DEFAULT_PAGE_SIZE);
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("Invalid limit. The page size must be between 1 and " + MAX_PAGE_SIZE + ".");
+        }
+
+        return pageSize;
+    }
+
+    /**
+     * Decode nextToken from Base64 JSON to DynamoDb map.
+     *
+     * @param nextToken
+     * @return Map<> - start key for the next page.
+     */
+    private Map<String, AttributeValue> decodeNextToken(String nextToken) {
+        if (nextToken == null || nextToken.isBlank()) {
+            return null;
+        }
+
+        byte[] decoded = Base64.getDecoder().decode(nextToken);
+        String json = new String(decoded);
+        LOGGER.debug("Decoded nextToken: {}", json);
+
+        try {
+            Map<String, String> tokenMap = JsonUtil.parseFromJsonToObject(json, new TypeReference<>() {
+            });
+
+            Map<String, AttributeValue> startKey = new HashMap<>();
+            startKey.put("partitionKey", AttributeValue.builder()
+                    .s(tokenMap.get("partitionKey"))
+                    .build());
+            startKey.put("sortKey", AttributeValue.builder()
+                    .s(tokenMap.get("sortKey"))
+                    .build());
+
+            return startKey;
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Failed to decode nextToken", e);
+            throw new IllegalArgumentException("Invalid nextToken format.", e);
+        }
+    }
+
+    private String encodeNextToken(Map<String, AttributeValue> lastEvaluatedKey) {
+        if (lastEvaluatedKey == null || lastEvaluatedKey.isEmpty()) {
+            return null;
+        }
+
+        Map<String, String> tokenMap = new HashMap<>();
+
+        for (Map.Entry<String, AttributeValue> entry : lastEvaluatedKey.entrySet()) {
+            AttributeValue value = entry.getValue();
+            if (value.s() != null) {
+                tokenMap.put(entry.getKey(), value.s());
+            } else if (value.n() != null) {
+                tokenMap.put(entry.getKey(), value.n());
+            }
+        }
+
+        try {
+            String json = JsonUtil.convertToJson(tokenMap);
+            String encoded = Base64.getEncoder().encodeToString(json.getBytes());
+            LOGGER.debug("Encoded nextToken: {}", encoded);
+
+            return encoded;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to create pagination token.", e);
+        }
+    }
+}
