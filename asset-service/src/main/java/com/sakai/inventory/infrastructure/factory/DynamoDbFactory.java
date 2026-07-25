@@ -74,6 +74,7 @@ public class DynamoDbFactory {
         return TableSchema.documentSchemaBuilder()
                 .addIndexPartitionKey(TableMetadata.primaryIndexName(), "partitionKey", AttributeValueType.S)
                 .addIndexSortKey(TableMetadata.primaryIndexName(), "sortKey", AttributeValueType.S)
+                .addIndexPartitionKey("GSI_entityType", "entityType", AttributeValueType.S)
                 .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
                 .build();
     }

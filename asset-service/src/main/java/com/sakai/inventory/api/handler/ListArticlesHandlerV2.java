@@ -52,7 +52,7 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
             ListArticlesHandlerV2.PaginationResult result = getAllArticlesPaginated(pageSize, exclusiveStartKey);
             List<ArticleDTO> articlesDTO = mapArticles(result.articles);
             PaginatedArticlesResponseDTO responseDTO = new PaginatedArticlesResponseDTO(
-                    articlesDTO,
+                    articlesDTO.toString(),
                     result.nextToken,
                     articlesDTO.size(),
                     result.nextToken != null

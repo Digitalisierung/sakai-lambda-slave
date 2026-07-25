@@ -21,7 +21,7 @@ public interface ArticleRepository {
     Optional<EnhancedDocument> findById(String id);
 
     /**
-     * Find all articles with pagination support.
+     * Find all articles with pagination support. Uses Query.
      *
      * @param limit             Maximum number of articles to return.
      * @param exclusiveStartKey DynamoDb pagination token (null for first page).

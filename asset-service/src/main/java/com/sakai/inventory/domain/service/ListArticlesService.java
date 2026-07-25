@@ -16,7 +16,10 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
-import java.util.*;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ListArticlesService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
@@ -33,55 +36,34 @@ public class ListArticlesService {
     public PaginatedArticlesResponseDTO listArticlesPaginated(int pageSize, String nextToken) {
         LOGGER.info("Listing articles with: pageSize {}", pageSize);
 
-        int validatedPageSize = validatePageSize(pageSize);
-
         Map<String, AttributeValue> exclusiveStartKey = decodeNextToken(nextToken);
 
-        List<String> articles = new ArrayList<>();
+        String articles = "[";
 
         try (DynamoDbClient client = DynamoDbFactory.createDynamoDbClient()) {
             DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient(client);
             String tableName = DynamoDbFactory.getTableName();
             TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
             articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
-            PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(validatedPageSize, exclusiveStartKey);
+            PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(pageSize, exclusiveStartKey);
 
             List<EnhancedDocument> items = paginatedResult.items();
 
             for (EnhancedDocument document : items) {
                 String json = document.toJson();
-                articles.add(json);
-                LOGGER.info("Enhanced document (JSON):");
-                LOGGER.info("{}", json);
+                articles = articles.concat(json + ",");
             }
 
+            articles = articles.replaceAll(".$", "]");
+            LOGGER.info("Will be returned: {}", articles);
             String encodedNextToken = encodeNextToken(paginatedResult.lastEvaluatedKey());
 
-            return new PaginatedArticlesResponseDTO(null, encodedNextToken, articles.size(), encodedNextToken != null);
+            return new PaginatedArticlesResponseDTO(articles, encodedNextToken, items.size(), encodedNextToken != null);
 
         } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
             throw e;
         }
-    }
-
-    /**
-     * Validate page size parameter.
-     *
-     * @param pageSize pagination page size.
-     * @return int
-     */
-    private int validatePageSize(Integer pageSize) {
-        if (pageSize == null) {
-            LOGGER.debug("No page size provided, use default.");
-            LOGGER.debug("Default page size: {}", DEFAULT_PAGE_SIZE);
-            return DEFAULT_PAGE_SIZE;
-        }
-
-        if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("Invalid limit. The page size must be between 1 and " + MAX_PAGE_SIZE + ".");
-        }
-
-        return pageSize;
     }
 
     /**

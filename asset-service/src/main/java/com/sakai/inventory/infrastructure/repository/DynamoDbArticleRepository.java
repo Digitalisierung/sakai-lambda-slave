@@ -3,14 +3,15 @@ package com.sakai.inventory.infrastructure.repository;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.pagination.sync.SdkIterable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
-import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable;
-import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.*;
@@ -36,36 +37,50 @@ public class DynamoDbArticleRepository implements ArticleRepository {
         return Optional.ofNullable(document);
     }
 
-    @Override
-    public PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey) {
-        LOGGER.debug("Finding all articles with: limit {}, startKey {}", limit, exclusiveStartKey != null);
-
-        ScanEnhancedRequest scanRequest = ScanEnhancedRequest.builder()
-                .exclusiveStartKey(exclusiveStartKey)
-                .limit(limit)
-                .build();
-
-        PageIterable<EnhancedDocument> pages = articleTable.scan(scanRequest);
-        Iterator<Page<EnhancedDocument>> pageIterator = pages.iterator();
-
-        List<EnhancedDocument> articles = new ArrayList<>(limit);
-        Map<String, AttributeValue> lastKey = null;
-
-        while (pageIterator.hasNext()) {
-            Page<EnhancedDocument> page = pageIterator.next();
-            articles.addAll(page.items());
-            lastKey = page.lastEvaluatedKey();
-
-            LOGGER.debug("Found {} articles", articles.size());
-        }
-
-        return new PaginatedResult<>(articles, lastKey);
-    }
-
     private Key buildArticleKey(String id) {
         return Key.builder()
                 .partitionValue("ARTICLES")
                 .sortValue("ARTICLES#SKU-030#" + id)
                 .build();
+    }
+
+    private Key buildArticleKey() {
+        return Key.builder()
+                .partitionValue("ARTICLES")
+                .build();
+    }
+
+    @Override
+    public PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey) {
+        LOGGER.debug("Finding all all articles. Limit {}, start key {}", limit, exclusiveStartKey != null);
+
+        Key key = buildArticleKey();
+
+        QueryConditional query = QueryConditional.keyEqualTo(key);
+
+        QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
+                .queryConditional(query)
+                .exclusiveStartKey(exclusiveStartKey)
+                .limit(limit)
+                .build();
+
+        // GSI entityType
+        SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType").query(queryRequest);
+
+        Optional<Page<EnhancedDocument>> pageOptional = sdkIterable.stream()
+                .findFirst();
+
+        final List<EnhancedDocument> articles = new ArrayList<>();
+        final Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>();
+        pageOptional.ifPresent(page -> {
+            articles.addAll(page.items());
+            if (page.lastEvaluatedKey() != null) {
+                lastEvaluatedKey.putAll(page.lastEvaluatedKey());
+            }
+        });
+
+        LOGGER.debug("Found {} articles.", articles.size());
+
+        return new PaginatedResult<>(articles, lastEvaluatedKey);
     }
 }

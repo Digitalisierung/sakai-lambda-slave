@@ -139,9 +139,9 @@ Resources:
         - AttributeName: sortKey
           KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: SKU-index
+        - IndexName: GSI_entityType
           KeySchema:
-            - AttributeName: SKU
+            - AttributeName: entityType
               KeyType: HASH
           Projection:
             ProjectionType: ALL

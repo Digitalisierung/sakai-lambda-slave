@@ -4,8 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.sakai.inventory.api.dto.PaginatedArticlesResponseDTO;
 import com.sakai.inventory.domain.service.ListArticlesService;
+import com.sakai.inventory.shared.exception.ExceptionHandler;
 import com.sakai.inventory.shared.util.JsonUtil;
 import com.sakai.inventory.shared.util.ResponseUtil;
 import org.slf4j.Logger;
@@ -18,6 +19,9 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesHandler.class);
 
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
+
     private ListArticlesService articlesService;
 
     public ListArticlesHandler() {
@@ -29,18 +33,31 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent apiRequest, Context context) {
         Map<String, String> queryStringParameters = apiRequest.getQueryStringParameters();
 
-        LOGGER.info("isNull? {}", queryStringParameters == null);
-        LOGGER.info("Query String Parameters size{}", queryStringParameters != null ? queryStringParameters.size() : 0);
-        LOGGER.info("Query Parameter limit: {}", queryStringParameters != null ? queryStringParameters.get("limit") : "NoN");
-        LOGGER.info("Query Parameter nextToken: {}", queryStringParameters != null ? queryStringParameters.get("nextToken") : "NoN");
+        int pageSize = parseLimit(queryStringParameters);
+        String nextToken = queryStringParameters != null ? queryStringParameters.get("nextToken") : null;
 
         try {
-            String json = JsonUtil.convertToJson(apiRequest);
-            LOGGER.info("APIGatewayProxyRequestEvent");
-            LOGGER.info("{}", json);
-            return ResponseUtil.createApiResponse(HttpStatusCode.OK, json, ResponseUtil.createHeaders());
-        } catch (JsonProcessingException e) {
-            return ResponseUtil.createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR, "Parsing exception");
+            PaginatedArticlesResponseDTO paginatedResponseDTO = articlesService.listArticlesPaginated(pageSize, nextToken);
+            String body = JsonUtil.convertToJson(paginatedResponseDTO);
+
+            return ResponseUtil.createApiResponse(HttpStatusCode.OK, body, ResponseUtil.createHeaders());
+        } catch (Exception e) {
+            return ExceptionHandler.handleException(e);
+        }
+    }
+
+    private int parseLimit(Map<String, String> queryParams) {
+        if (queryParams == null || !queryParams.containsKey("limit")) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        String limit = queryParams.get("limit");
+        try {
+            int pageSize = Integer.parseInt(limit);
+            if (pageSize < 0) {
+                return DEFAULT_PAGE_SIZE;
+            } else return Math.min(pageSize, MAX_PAGE_SIZE);
+        } catch (Exception e) {
+            return DEFAULT_PAGE_SIZE;
         }
     }
 }
