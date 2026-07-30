@@ -81,6 +81,10 @@ Desktop.ini
 *.lst
 pom.properties
 *.log
+*.png
+*.jpeg
+*.png
+*.gif
 
 #######################################
 # Lambda

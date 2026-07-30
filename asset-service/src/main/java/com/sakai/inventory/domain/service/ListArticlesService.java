@@ -20,6 +20,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ListArticlesService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
@@ -38,7 +39,7 @@ public class ListArticlesService {
 
         Map<String, AttributeValue> exclusiveStartKey = decodeNextToken(nextToken);
 
-        String articles = "[";
+        // String articles = "[";
 
         try (DynamoDbClient client = DynamoDbFactory.createDynamoDbClient()) {
             DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient(client);
@@ -49,20 +50,17 @@ public class ListArticlesService {
 
             List<EnhancedDocument> items = paginatedResult.items();
 
-            for (EnhancedDocument document : items) {
-                String json = document.toJson();
-                articles = articles.concat(json + ",");
-            }
+            String articles = items.stream()
+                    .map(EnhancedDocument::toJson)
+                    .collect(Collectors.joining(",", "[", "]"));
 
-            articles = articles.replaceAll(".$", "]");
-            LOGGER.info("Will be returned: {}", articles);
             String encodedNextToken = encodeNextToken(paginatedResult.lastEvaluatedKey());
+
+            LOGGER.info("Listed articles successfully, returned items {}, hasMore={}", items.size(), encodedNextToken != null);
+            LOGGER.debug("Returned articles payload: {}", articles);
 
             return new PaginatedArticlesResponseDTO(articles, encodedNextToken, items.size(), encodedNextToken != null);
 
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
-            throw e;
         }
     }
 
@@ -86,12 +84,13 @@ public class ListArticlesService {
             });
 
             Map<String, AttributeValue> startKey = new HashMap<>();
-            startKey.put("partitionKey", AttributeValue.builder()
-                    .s(tokenMap.get("partitionKey"))
-                    .build());
-            startKey.put("sortKey", AttributeValue.builder()
-                    .s(tokenMap.get("sortKey"))
-                    .build());
+            for (Map.Entry<String, String> entry : tokenMap.entrySet()) {
+                if (entry.getValue() != null) {
+                    startKey.put(entry.getKey(), AttributeValue.builder()
+                            .s(entry.getValue())
+                            .build());
+                }
+            }
 
             return startKey;
         } catch (JsonProcessingException e) {

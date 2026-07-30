@@ -25,29 +25,30 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
 
     public GetArticleHandler() {
         super();
-        LOGGER.info("Initializing GetArticleService");
         getArticleService = new GetArticleService();
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
-        LOGGER.info("Processing {} {} request.", requestEvent.getHttpMethod(), requestEvent.getPath());
+        LOGGER.info("Get article request received.");
+        LOGGER.info("path: {}", requestEvent.getPath());
 
         Map<String, String> pathParameters = requestEvent.getPathParameters();
         if (pathParameters == null || !pathParameters.containsKey("id")) {
-            LOGGER.error("Missing 'id' path parameters.");
-            return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing article ID");
+            LOGGER.warn("Missing required path parameter: id.");
+            return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing required path parameter: article ID");
         }
 
+        String articleId = pathParameters.get("id");
         try {
-            String articleId = pathParameters.get("id");
             String article = getArticleService.findArticleById(articleId);
             LOGGER.info("Fetching article by id: {}", articleId);
-            LOGGER.info("{}", article);
+            LOGGER.debug("{}", article);
 
             return ResponseUtil.createApiResponse(HttpStatusCode.OK, article, ResponseUtil.createHeaders());
         } catch (Exception e) {
-            LOGGER.info(e.getMessage(), e);
+            String logMessage = String.format("Failed to handle get article request. Article ID=%s", articleId);
+            LOGGER.error(logMessage, e);
             return ExceptionHandler.handleException(e);
         }
     }

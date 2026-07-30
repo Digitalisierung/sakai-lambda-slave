@@ -31,10 +31,12 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent apiRequest, Context context) {
+        LOGGER.info("List articles request received.");
         Map<String, String> queryStringParameters = apiRequest.getQueryStringParameters();
 
         int pageSize = parseLimit(queryStringParameters);
-        String nextToken = queryStringParameters != null ? queryStringParameters.get("nextToken") : null;
+        String nextToken = extractToken(queryStringParameters);
+        LOGGER.debug("Query Params: limit {}, has nextToken - {}", pageSize, nextToken != null);
 
         try {
             PaginatedArticlesResponseDTO paginatedResponseDTO = articlesService.listArticlesPaginated(pageSize, nextToken);
@@ -42,6 +44,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
 
             return ResponseUtil.createApiResponse(HttpStatusCode.OK, body, ResponseUtil.createHeaders());
         } catch (Exception e) {
+            LOGGER.error("Failed to handle list articles request: pageSize {}, has nextToken - {}", pageSize, nextToken != null, e);
             return ExceptionHandler.handleException(e);
         }
     }
@@ -59,5 +62,13 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         } catch (Exception e) {
             return DEFAULT_PAGE_SIZE;
         }
+    }
+
+    private String extractToken(Map<String, String> queryStringParameters) {
+        if (queryStringParameters == null || !queryStringParameters.containsKey("nextToken")) {
+            return null;
+        }
+
+        return queryStringParameters.get("nextToken");
     }
 }

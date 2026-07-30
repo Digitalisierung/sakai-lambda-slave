@@ -37,10 +37,31 @@ public class DynamoDbArticleRepository implements ArticleRepository {
         return Optional.ofNullable(document);
     }
 
+    @Override
+    public List<EnhancedDocument> findArticleById(String articleId) {
+        QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKey(articleId));
+
+        QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
+                .queryConditional(queryConditional)
+                .build();
+
+        // GSI entityType
+        SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType")
+                .query(queryRequest);
+
+        Optional<Page<EnhancedDocument>> pageOptional = sdkIterable.stream()
+                .findFirst();
+
+        final List<EnhancedDocument> items = new ArrayList<>();
+        pageOptional.ifPresent(page -> items.addAll(page.items()));
+
+        return items;
+    }
+
     private Key buildArticleKey(String id) {
         return Key.builder()
                 .partitionValue("ARTICLES")
-                .sortValue("ARTICLES#SKU-030#" + id)
+                .sortValue(id)
                 .build();
     }
 

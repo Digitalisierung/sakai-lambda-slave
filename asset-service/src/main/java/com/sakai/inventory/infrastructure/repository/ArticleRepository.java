@@ -4,6 +4,7 @@ import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -19,6 +20,8 @@ public interface ArticleRepository {
      * @return
      */
     Optional<EnhancedDocument> findById(String id);
+
+    List<EnhancedDocument> findArticleById(String articleId);
 
     /**
      * Find all articles with pagination support. Uses Query.

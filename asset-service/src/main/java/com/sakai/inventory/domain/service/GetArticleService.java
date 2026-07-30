@@ -1,15 +1,17 @@
 package com.sakai.inventory.domain.service;
 
 import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
-import com.sakai.inventory.infrastructure.mapper.DynDbMapper;
 import com.sakai.inventory.infrastructure.repository.ArticleRepository;
 import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
+import com.sakai.inventory.shared.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+
+import java.util.List;
 
 /**
  * Service for managing articles.
@@ -19,15 +21,9 @@ public class GetArticleService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GetArticleService.class);
 
     private ArticleRepository articleRepository;
-    private DynDbMapper mapper;
 
     public GetArticleService() {
         super();
-    }
-
-    public GetArticleService(ArticleRepository repository, DynDbMapper mapper) {
-        this.articleRepository = repository;
-        this.mapper = mapper;
     }
 
     public String findArticleById(String id) {
@@ -38,12 +34,15 @@ public class GetArticleService {
             TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
             String tableName = DynamoDbFactory.getTableName();
             articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
-            EnhancedDocument document = articleRepository.findById(id)
-                    .orElseThrow();
+
+            List<EnhancedDocument> articles = articleRepository.findArticleById("ITEM#" + id);
+
+            if (articles == null || articles.isEmpty()) {
+                throw new NotFoundException("Article not found with id: " + id);
+            }
+            EnhancedDocument document = articles.getFirst();
+
             return document.toJson();
-        } catch (Exception e) {
-            LOGGER.error("Error", e);
-            throw e;
         }
     }
 }

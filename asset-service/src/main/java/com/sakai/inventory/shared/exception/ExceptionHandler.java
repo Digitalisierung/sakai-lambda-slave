@@ -9,7 +9,23 @@ public class ExceptionHandler {
     }
 
     public static APIGatewayProxyResponseEvent handleException(Exception e) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR);
+        APIGatewayProxyResponseEvent responseEvent;
+
+        if (e instanceof NotFoundException notFoundException) {
+            responseEvent = handleException(notFoundException);
+        } else if (e instanceof software.amazon.awssdk.thirdparty.jackson.core.JsonParseException jsonParseException) {
+            responseEvent = handleException(jsonParseException);
+        } else if (e instanceof com.fasterxml.jackson.core.JsonParseException jsonParseException) {
+            responseEvent = handleException(jsonParseException);
+        } else if (e instanceof software.amazon.awssdk.thirdparty.jackson.core.JsonProcessingException jsonProcessingException) {
+            responseEvent = handleException(jsonProcessingException);
+        } else if (e instanceof com.fasterxml.jackson.core.JsonProcessingException jsonProcessingException) {
+            responseEvent = handleException(jsonProcessingException);
+        } else {
+            responseEvent = new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR);
+        }
+
+        return responseEvent;
     }
 
     public static APIGatewayProxyResponseEvent handleException(NotFoundException e) {
