@@ -9,6 +9,7 @@ public class DynamicFieldValue {
     private String value; // Eigentlicher Inhalt.
 
     public DynamicFieldValue() {
+        super();
     }
 
     public String getName() {

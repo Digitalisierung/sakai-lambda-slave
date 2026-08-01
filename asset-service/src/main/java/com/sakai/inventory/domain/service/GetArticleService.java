@@ -32,9 +32,10 @@ public class GetArticleService {
         EnhancedDocument document = articleRepository.findArticleById("ITEM#" + id)
                 .orElseThrow(() -> new NotFoundException("Article not found with id: " + id));
 
+        String jsonDocument = document.toJson();
         LOGGER.info("Successfully fetched article: {}", id);
-        LOGGER.debug("Returned articles payload: {}", document.toJson());
-        return document.toJson();
+        LOGGER.debug("Returned articles payload: {}", jsonDocument);
 
+        return jsonDocument;
     }
 }

@@ -24,9 +24,6 @@ import java.util.stream.Collectors;
 public class ListArticlesService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
 
-    private static final int DEFAULT_PAGE_SIZE = 10;
-    private static final int MAX_PAGE_SIZE = 100;
-
     private ArticleRepository articleRepository;
 
     public ListArticlesService() {

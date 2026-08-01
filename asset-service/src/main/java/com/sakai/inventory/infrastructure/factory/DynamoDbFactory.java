@@ -15,6 +15,13 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 public class DynamoDbFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbFactory.class);
 
+    private static final String GSI_ENTITY_TYPE = "GSI_entityType";
+    private static final String GSI_ITEMS_IN_CATALOG = "GSI_ItemsInCatalogs";
+    private static final String PARTITION_KEY = "partitionKey";
+    private static final String SORT_KEY = "sortKey";
+    private static final String ATTRIBUTE_ENTITY_TYPE = "entityType";
+    private static final String ATTRIBUTE_CATALOG_ID = "catalogId";
+
     private static final DynamoDbClient DDB_CLIENT = DynamoDbClient.builder()
             .httpClient(AwsCrtHttpClient.create())
             .build();
@@ -63,12 +70,12 @@ public class DynamoDbFactory {
     public static TableSchema<EnhancedDocument> createTableSchema() {
         LOGGER.debug("Table Schema will be created.");
         return TableSchema.documentSchemaBuilder()
-                .addIndexPartitionKey(TableMetadata.primaryIndexName(), "partitionKey", AttributeValueType.S)
-                .addIndexSortKey(TableMetadata.primaryIndexName(), "sortKey", AttributeValueType.S)
-                .addIndexPartitionKey("GSI_entityType", "entityType", AttributeValueType.S)
-                .addIndexSortKey("GSI_entityType", "sortKey", AttributeValueType.S)
-                .addIndexPartitionKey("GSI_ItemsInCatalogs", "catalogId", AttributeValueType.S)
-                .addIndexSortKey("GSI_ItemsInCatalogs", "sortKey", AttributeValueType.S)
+                .addIndexPartitionKey(TableMetadata.primaryIndexName(), PARTITION_KEY, AttributeValueType.S)
+                .addIndexSortKey(TableMetadata.primaryIndexName(), SORT_KEY, AttributeValueType.S)
+                .addIndexPartitionKey(GSI_ENTITY_TYPE, ATTRIBUTE_ENTITY_TYPE, AttributeValueType.S)
+                .addIndexSortKey(GSI_ENTITY_TYPE, SORT_KEY, AttributeValueType.S)
+                .addIndexPartitionKey(GSI_ITEMS_IN_CATALOG, ATTRIBUTE_CATALOG_ID, AttributeValueType.S)
+                .addIndexSortKey(GSI_ITEMS_IN_CATALOG, SORT_KEY, AttributeValueType.S)
                 .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
                 .build();
     }
