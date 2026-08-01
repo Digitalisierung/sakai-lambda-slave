@@ -41,10 +41,12 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         try {
             PaginatedArticlesResponseDTO paginatedResponseDTO = articlesService.listArticlesPaginated(pageSize, nextToken);
             String body = JsonUtil.convertToJson(paginatedResponseDTO);
+            LOGGER.info("List articles request completed. Has more: {}", paginatedResponseDTO.hasMore());
 
             return ResponseUtil.createApiResponse(HttpStatusCode.OK, body, ResponseUtil.createHeaders());
         } catch (Exception e) {
-            LOGGER.error("Failed to handle list articles request: pageSize {}, has nextToken - {}", pageSize, nextToken != null, e);
+            String message = String.format("Failed to handle list articles request: pageSize %s, has nextToken - %s", pageSize, nextToken != null);
+            LOGGER.error(message, e);
             return ExceptionHandler.handleException(e);
         }
     }

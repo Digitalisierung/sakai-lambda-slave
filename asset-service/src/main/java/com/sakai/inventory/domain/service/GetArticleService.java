@@ -9,9 +9,6 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-
-import java.util.List;
 
 /**
  * Service for managing articles.
@@ -27,22 +24,17 @@ public class GetArticleService {
     }
 
     public String findArticleById(String id) {
-        LOGGER.info("Find article by id: {}", id);
+        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
+        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+        String tableName = DynamoDbFactory.getTableName();
+        articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
 
-        try (DynamoDbClient client = DynamoDbFactory.createDynamoDbClient()) {
-            DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient(client);
-            TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
-            String tableName = DynamoDbFactory.getTableName();
-            articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
+        EnhancedDocument document = articleRepository.findArticleById("ITEM#" + id)
+                .orElseThrow(() -> new NotFoundException("Article not found with id: " + id));
 
-            List<EnhancedDocument> articles = articleRepository.findArticleById("ITEM#" + id);
+        LOGGER.info("Successfully fetched article: {}", id);
+        LOGGER.debug("Returned articles payload: {}", document.toJson());
+        return document.toJson();
 
-            if (articles == null || articles.isEmpty()) {
-                throw new NotFoundException("Article not found with id: " + id);
-            }
-            EnhancedDocument document = articles.getFirst();
-
-            return document.toJson();
-        }
     }
 }

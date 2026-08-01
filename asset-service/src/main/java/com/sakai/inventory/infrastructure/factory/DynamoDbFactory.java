@@ -15,12 +15,16 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 public class DynamoDbFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbFactory.class);
 
-    private static DynamoDbClient ddbClient;
-    private static DynamoDbEnhancedClient enhancedClient;
+    private static final DynamoDbClient DDB_CLIENT = DynamoDbClient.builder()
+            .httpClient(AwsCrtHttpClient.create())
+            .build();
+
+    private static final DynamoDbEnhancedClient ENHANCED_CLIENT = DynamoDbEnhancedClient.builder()
+            .dynamoDbClient(DDB_CLIENT)
+            .build();
 
     private DynamoDbFactory() {
         super();
-        LOGGER.error("DynamoDbFactory has been created.");
     }
 
     /**
@@ -29,30 +33,16 @@ public class DynamoDbFactory {
      * @return DynamoDbClient
      */
     public static DynamoDbClient createDynamoDbClient() {
-        if (ddbClient == null) {
-            ddbClient = DynamoDbClient.builder()
-                    .httpClient(AwsCrtHttpClient.create())
-                    .build();
-            LOGGER.debug("Creating DynamoDb client.");
-        }
-
-        return ddbClient;
+        return DDB_CLIENT;
     }
 
     /**
      * Get or create DynamoDb Enhanced client instance.
      *
-     * @param client
      * @return DynamoDbEnhancedClient
      */
-    public static DynamoDbEnhancedClient createEnhancedClient(DynamoDbClient client) {
-        if (enhancedClient == null) {
-            enhancedClient = DynamoDbEnhancedClient.builder()
-                    .dynamoDbClient(client)
-                    .build();
-        }
-
-        return enhancedClient;
+    public static DynamoDbEnhancedClient createEnhancedClient() {
+        return ENHANCED_CLIENT;
     }
 
     /**
@@ -71,6 +61,7 @@ public class DynamoDbFactory {
     }
 
     public static TableSchema<EnhancedDocument> createTableSchema() {
+        LOGGER.debug("Table Schema will be created.");
         return TableSchema.documentSchemaBuilder()
                 .addIndexPartitionKey(TableMetadata.primaryIndexName(), "partitionKey", AttributeValueType.S)
                 .addIndexSortKey(TableMetadata.primaryIndexName(), "sortKey", AttributeValueType.S)

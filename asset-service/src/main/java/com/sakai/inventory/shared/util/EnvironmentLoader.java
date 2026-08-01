@@ -21,7 +21,7 @@ public class EnvironmentLoader {
 
         String value = System.getenv(key);
         if (value == null || value.isBlank()) {
-            LOGGER.error("Environment variable {} is not set.", key);
+            LOGGER.warn("Environment variable {} is not set. Falling back to system property.", key);
             return System.getProperty(key);
         }
         return value;
@@ -31,10 +31,12 @@ public class EnvironmentLoader {
         if (System.getenv("USER") == null) {
             Properties properties = System.getProperties();
             InputStream resourceAsStream = EnvironmentLoader.class.getClassLoader().getResourceAsStream(".env");
-            properties.load(resourceAsStream);
-            System.setProperties(properties);
+            if (resourceAsStream != null) {
+                properties.load(resourceAsStream);
+                System.setProperties(properties);
+            }
         } else {
-            LOGGER.error("USER environment variable is already defined.");
+            LOGGER.debug("Skipping .env loading because USER environment variable is already defined.");
         }
     }
 }

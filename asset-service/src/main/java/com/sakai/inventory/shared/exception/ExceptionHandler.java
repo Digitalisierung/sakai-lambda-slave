@@ -1,6 +1,7 @@
 package com.sakai.inventory.shared.exception;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.sakai.inventory.shared.util.ResponseUtil;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 public class ExceptionHandler {
@@ -9,42 +10,19 @@ public class ExceptionHandler {
     }
 
     public static APIGatewayProxyResponseEvent handleException(Exception e) {
-        APIGatewayProxyResponseEvent responseEvent;
 
-        if (e instanceof NotFoundException notFoundException) {
-            responseEvent = handleException(notFoundException);
-        } else if (e instanceof software.amazon.awssdk.thirdparty.jackson.core.JsonParseException jsonParseException) {
-            responseEvent = handleException(jsonParseException);
-        } else if (e instanceof com.fasterxml.jackson.core.JsonParseException jsonParseException) {
-            responseEvent = handleException(jsonParseException);
-        } else if (e instanceof software.amazon.awssdk.thirdparty.jackson.core.JsonProcessingException jsonProcessingException) {
-            responseEvent = handleException(jsonProcessingException);
-        } else if (e instanceof com.fasterxml.jackson.core.JsonProcessingException jsonProcessingException) {
-            responseEvent = handleException(jsonProcessingException);
-        } else {
-            responseEvent = new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR);
-        }
-
-        return responseEvent;
-    }
-
-    public static APIGatewayProxyResponseEvent handleException(NotFoundException e) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.NOT_FOUND);
-    }
-
-    public static APIGatewayProxyResponseEvent handleException(software.amazon.awssdk.thirdparty.jackson.core.JsonParseException e) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.BAD_REQUEST);
-    }
-
-    public static APIGatewayProxyResponseEvent handleException(com.fasterxml.jackson.core.JsonParseException e) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.BAD_REQUEST);
-    }
-
-    public static APIGatewayProxyResponseEvent handleException(software.amazon.awssdk.thirdparty.jackson.core.JsonProcessingException e) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.BAD_REQUEST);
-    }
-
-    public static APIGatewayProxyResponseEvent handleException(com.fasterxml.jackson.core.JsonProcessingException e) {
-        return new APIGatewayProxyResponseEvent().withStatusCode(HttpStatusCode.BAD_REQUEST);
+        return switch (e) {
+            case NotFoundException notFoundException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.NOT_FOUND, notFoundException.getMessage());
+            case software.amazon.awssdk.thirdparty.jackson.core.JsonParseException jsonParseException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonParseException.getMessage());
+            case com.fasterxml.jackson.core.JsonParseException jsonParseExcept ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonParseExcept.getMessage());
+            case software.amazon.awssdk.thirdparty.jackson.core.JsonProcessingException jsonProcessException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessException.getMessage());
+            case com.fasterxml.jackson.core.JsonProcessingException jsonProcessingException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessingException.getMessage());
+            default -> ResponseUtil.createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR, e.getMessage());
+        };
     }
 }

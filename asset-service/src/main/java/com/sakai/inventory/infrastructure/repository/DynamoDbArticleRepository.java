@@ -23,7 +23,7 @@ public class DynamoDbArticleRepository implements ArticleRepository {
 
     public DynamoDbArticleRepository(final DynamoDbEnhancedClient enhancedClient, final String tableName, TableSchema<EnhancedDocument> tableSchema) {
         this.articleTable = enhancedClient.table(tableName, tableSchema);
-        LOGGER.info("DynamoDbArticleRepository initialized with table {}", tableName);
+        LOGGER.info("DynamoDbArticleRepository initialized, table {}", tableName);
     }
 
     @Override
@@ -38,42 +38,25 @@ public class DynamoDbArticleRepository implements ArticleRepository {
     }
 
     @Override
-    public List<EnhancedDocument> findArticleById(String articleId) {
+    public Optional<EnhancedDocument> findArticleById(String articleId) {
+        LOGGER.debug("Querying single article by id='{}' using GSI_entityType.", articleId);
         QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKey(articleId));
 
         QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
                 .queryConditional(queryConditional)
                 .build();
 
-        // GSI entityType
         SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType")
                 .query(queryRequest);
 
-        Optional<Page<EnhancedDocument>> pageOptional = sdkIterable.stream()
+        return sdkIterable.stream()
+                .map(page -> page.items().getFirst())
                 .findFirst();
-
-        final List<EnhancedDocument> items = new ArrayList<>();
-        pageOptional.ifPresent(page -> items.addAll(page.items()));
-
-        return items;
-    }
-
-    private Key buildArticleKey(String id) {
-        return Key.builder()
-                .partitionValue("ARTICLES")
-                .sortValue(id)
-                .build();
-    }
-
-    private Key buildArticleKey() {
-        return Key.builder()
-                .partitionValue("ARTICLES")
-                .build();
     }
 
     @Override
     public PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey) {
-        LOGGER.debug("Finding all all articles. Limit {}, start key {}", limit, exclusiveStartKey != null);
+        LOGGER.debug("Paginated querying (all) articles using GSI_entityType. Limit {}, start key {}", limit, exclusiveStartKey != null);
 
         Key key = buildArticleKey();
 
@@ -85,8 +68,8 @@ public class DynamoDbArticleRepository implements ArticleRepository {
                 .limit(limit)
                 .build();
 
-        // GSI entityType
-        SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType").query(queryRequest);
+        SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType")
+                .query(queryRequest);
 
         Optional<Page<EnhancedDocument>> pageOptional = sdkIterable.stream()
                 .findFirst();
@@ -103,5 +86,22 @@ public class DynamoDbArticleRepository implements ArticleRepository {
         LOGGER.debug("Found {} articles.", articles.size());
 
         return new PaginatedResult<>(articles, lastEvaluatedKey);
+    }
+
+    private Key buildArticleKey(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Article id must not be null or empty.");
+        }
+
+        return Key.builder()
+                .partitionValue("ARTICLES")
+                .sortValue(id)
+                .build();
+    }
+
+    private Key buildArticleKey() {
+        return Key.builder()
+                .partitionValue("ARTICLES")
+                .build();
     }
 }

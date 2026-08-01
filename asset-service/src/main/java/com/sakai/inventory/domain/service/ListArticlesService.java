@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Base64;
@@ -35,33 +34,29 @@ public class ListArticlesService {
     }
 
     public PaginatedArticlesResponseDTO listArticlesPaginated(int pageSize, String nextToken) {
-        LOGGER.info("Listing articles with: pageSize {}", pageSize);
+        LOGGER.info("Listing articles...");
 
         Map<String, AttributeValue> exclusiveStartKey = decodeNextToken(nextToken);
 
-        // String articles = "[";
+        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
+        String tableName = DynamoDbFactory.getTableName();
+        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+        articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
+        PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(pageSize, exclusiveStartKey);
 
-        try (DynamoDbClient client = DynamoDbFactory.createDynamoDbClient()) {
-            DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient(client);
-            String tableName = DynamoDbFactory.getTableName();
-            TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
-            articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
-            PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(pageSize, exclusiveStartKey);
+        List<EnhancedDocument> items = paginatedResult.items();
 
-            List<EnhancedDocument> items = paginatedResult.items();
+        String articles = items.stream()
+                .map(EnhancedDocument::toJson)
+                .collect(Collectors.joining(",", "[", "]"));
 
-            String articles = items.stream()
-                    .map(EnhancedDocument::toJson)
-                    .collect(Collectors.joining(",", "[", "]"));
+        String encodedNextToken = encodeNextToken(paginatedResult.lastEvaluatedKey());
 
-            String encodedNextToken = encodeNextToken(paginatedResult.lastEvaluatedKey());
+        LOGGER.info("Articles listed successfully. Returned {} items. hasMore='{}'.", items.size(), encodedNextToken != null);
+        LOGGER.debug("Returned articles payload: {}", articles);
 
-            LOGGER.info("Listed articles successfully, returned items {}, hasMore={}", items.size(), encodedNextToken != null);
-            LOGGER.debug("Returned articles payload: {}", articles);
+        return new PaginatedArticlesResponseDTO(articles, encodedNextToken, items.size(), encodedNextToken != null);
 
-            return new PaginatedArticlesResponseDTO(articles, encodedNextToken, items.size(), encodedNextToken != null);
-
-        }
     }
 
     /**
@@ -77,7 +72,7 @@ public class ListArticlesService {
 
         byte[] decoded = Base64.getDecoder().decode(nextToken);
         String json = new String(decoded);
-        LOGGER.debug("Decoded nextToken: {}", json);
+        LOGGER.debug("Decoded nextToken successfully. Decoded token='{}'", json);
 
         try {
             Map<String, String> tokenMap = JsonUtil.parseFromJsonToObject(json, new TypeReference<>() {
@@ -94,7 +89,7 @@ public class ListArticlesService {
 
             return startKey;
         } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to decode nextToken", e);
+            LOGGER.error("Failed to decode nextToken.", e);
             throw new IllegalArgumentException("Invalid nextToken format.", e);
         }
     }
@@ -118,10 +113,11 @@ public class ListArticlesService {
         try {
             String json = JsonUtil.convertToJson(tokenMap);
             String encoded = Base64.getEncoder().encodeToString(json.getBytes());
-            LOGGER.debug("Encoded nextToken: {}", encoded);
+            LOGGER.debug("Encoded nextToken successfully. Encoded token='{}'", encoded);
 
             return encoded;
         } catch (JsonProcessingException e) {
+            LOGGER.error("Failed to encode nextToken.", e);
             throw new RuntimeException("Failed to create pagination token.", e);
         }
     }

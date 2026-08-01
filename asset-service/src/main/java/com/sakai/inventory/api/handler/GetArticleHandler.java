@@ -31,8 +31,9 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
         LOGGER.info("Get article request received.");
-        LOGGER.info("path: {}", requestEvent.getPath());
+        LOGGER.debug("path: {}", requestEvent.getPath());
 
+        // extract path param
         Map<String, String> pathParameters = requestEvent.getPathParameters();
         if (pathParameters == null || !pathParameters.containsKey("id")) {
             LOGGER.warn("Missing required path parameter: id.");
@@ -40,9 +41,12 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
         }
 
         String articleId = pathParameters.get("id");
+
+        // find article
         try {
+            LOGGER.info(" Fetching article by id: {}", articleId);
             String article = getArticleService.findArticleById(articleId);
-            LOGGER.info("Fetching article by id: {}", articleId);
+            LOGGER.info("Get article request completed.");
             LOGGER.debug("{}", article);
 
             return ResponseUtil.createApiResponse(HttpStatusCode.OK, article, ResponseUtil.createHeaders());
