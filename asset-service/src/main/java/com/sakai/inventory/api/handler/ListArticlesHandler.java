@@ -6,11 +6,17 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.api.dto.PaginatedArticlesResponseDTO;
 import com.sakai.inventory.domain.service.ListArticlesService;
+import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
+import com.sakai.inventory.infrastructure.repository.ArticleRepository;
+import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
 import com.sakai.inventory.shared.exception.ExceptionHandler;
 import com.sakai.inventory.shared.util.JsonUtil;
 import com.sakai.inventory.shared.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.util.Map;
@@ -26,7 +32,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
 
     public ListArticlesHandler() {
         super();
-        articlesService = new ListArticlesService();
+        articlesService = new ListArticlesService(createArticleRepository());
     }
 
     @Override
@@ -72,5 +78,12 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
         }
 
         return queryStringParameters.get("nextToken");
+    }
+
+    private ArticleRepository createArticleRepository() {
+        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
+        String tableName = DynamoDbFactory.getTableName();
+        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+        return new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
     }
 }

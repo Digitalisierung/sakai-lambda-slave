@@ -50,7 +50,7 @@ public class DynamoDbArticleRepository implements ArticleRepository {
                 .query(queryRequest);
 
         return sdkIterable.stream()
-                .map(page -> page.items().getFirst())
+                .flatMap(page -> page.items().stream())
                 .findFirst();
     }
 

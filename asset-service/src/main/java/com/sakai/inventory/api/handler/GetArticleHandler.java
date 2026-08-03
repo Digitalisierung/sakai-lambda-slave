@@ -5,10 +5,16 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.domain.service.GetArticleService;
+import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
+import com.sakai.inventory.infrastructure.repository.ArticleRepository;
+import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
 import com.sakai.inventory.shared.exception.ExceptionHandler;
 import com.sakai.inventory.shared.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.util.Map;
@@ -25,7 +31,7 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
 
     public GetArticleHandler() {
         super();
-        getArticleService = new GetArticleService();
+        getArticleService = new GetArticleService(createArticleRepository());
     }
 
     @Override
@@ -45,15 +51,29 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
         // find article
         try {
             LOGGER.info(" Fetching article by id: {}", articleId);
-            String article = getArticleService.findArticleById(articleId);
-            LOGGER.info("Get article request completed.");
-            LOGGER.debug("{}", article);
-
-            return ResponseUtil.createApiResponse(HttpStatusCode.OK, article, ResponseUtil.createHeaders());
+            return getArticleService.findArticleById(articleId)
+                    .map(document -> {
+                        LOGGER.info("Get article request completed.");
+                        String jsonDocument = document.toJson();
+                        LOGGER.debug("Returned articles payload: {}", jsonDocument);
+                        return ResponseUtil.createApiResponse(HttpStatusCode.OK, jsonDocument, ResponseUtil.createHeaders());
+                    })
+                    .orElseGet(() -> {
+                                LOGGER.info("Article not found.");
+                                return ResponseUtil.createApiResponse(HttpStatusCode.NOT_FOUND, null, ResponseUtil.createHeaders());
+                            }
+                    );
         } catch (Exception e) {
             String logMessage = String.format("Failed to handle get article request. Article ID=%s", articleId);
             LOGGER.error(logMessage, e);
             return ExceptionHandler.handleException(e);
         }
+    }
+
+    private ArticleRepository createArticleRepository() {
+        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
+        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+        String tableName = DynamoDbFactory.getTableName();
+        return new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
     }
 }

@@ -1,14 +1,11 @@
 package com.sakai.inventory.domain.service;
 
-import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.repository.ArticleRepository;
-import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
-import com.sakai.inventory.shared.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+
+import java.util.Optional;
 
 /**
  * Service for managing articles.
@@ -17,25 +14,14 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 public class GetArticleService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GetArticleService.class);
 
-    private ArticleRepository articleRepository;
+    private final ArticleRepository articleRepository;
 
-    public GetArticleService() {
+    public GetArticleService(ArticleRepository articleRepository) {
         super();
+        this.articleRepository = articleRepository;
     }
 
-    public String findArticleById(String id) {
-        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
-        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
-        String tableName = DynamoDbFactory.getTableName();
-        articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
-
-        EnhancedDocument document = articleRepository.findArticleById("ITEM#" + id)
-                .orElseThrow(() -> new NotFoundException("Article not found with id: " + id));
-
-        String jsonDocument = document.toJson();
-        LOGGER.info("Successfully fetched article: {}", id);
-        LOGGER.debug("Returned articles payload: {}", jsonDocument);
-
-        return jsonDocument;
+    public Optional<EnhancedDocument> findArticleById(String id) {
+        return articleRepository.findArticleById("ITEM#" + id);
     }
 }

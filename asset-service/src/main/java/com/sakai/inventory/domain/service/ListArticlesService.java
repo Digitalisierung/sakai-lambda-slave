@@ -3,15 +3,11 @@ package com.sakai.inventory.domain.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.sakai.inventory.api.dto.PaginatedArticlesResponseDTO;
-import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import com.sakai.inventory.infrastructure.repository.ArticleRepository;
-import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
 import com.sakai.inventory.shared.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -24,10 +20,11 @@ import java.util.stream.Collectors;
 public class ListArticlesService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
 
-    private ArticleRepository articleRepository;
+    private final ArticleRepository articleRepository;
 
-    public ListArticlesService() {
+    public ListArticlesService(ArticleRepository articleRepository) {
         super();
+        this.articleRepository = articleRepository;
     }
 
     public PaginatedArticlesResponseDTO listArticlesPaginated(int pageSize, String nextToken) {
@@ -35,10 +32,6 @@ public class ListArticlesService {
 
         Map<String, AttributeValue> exclusiveStartKey = decodeNextToken(nextToken);
 
-        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
-        String tableName = DynamoDbFactory.getTableName();
-        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
-        articleRepository = new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
         PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(pageSize, exclusiveStartKey);
 
         List<EnhancedDocument> items = paginatedResult.items();
