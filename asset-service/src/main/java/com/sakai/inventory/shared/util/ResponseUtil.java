@@ -16,7 +16,7 @@ public final class ResponseUtil {
      *
      * @return Map<String, String>
      */
-    public static Map<String, String> createHeaders() {
+    public static Map<String, String> createHeader() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
         return headers;
@@ -27,9 +27,8 @@ public final class ResponseUtil {
      *
      * @return Map<String, String>
      */
-    public static Map<String, String> createExpandedHeaders() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
+    public static Map<String, String> createExpandedHeader() {
+        Map<String, String> headers = ResponseUtil.createHeader();
         headers.put("Access-Control-Allow-Origin", "*");
         headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token");
         headers.put("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
@@ -61,6 +60,6 @@ public final class ResponseUtil {
      */
     public static APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
         String body = String.format("{\"message\": \"%s\"}", message);
-        return createApiResponse(statusCode, body, createHeaders());
+        return createApiResponse(statusCode, body, createHeader());
     }
 }

@@ -38,7 +38,7 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
-        Map<String, String> header = ResponseUtil.createHeaders();
+        Map<String, String> header = ResponseUtil.createHeader();
         header.put("Access-Control-Allow-Origin", "*"); // CORS falls benötigt
 
         // get Query Parameter

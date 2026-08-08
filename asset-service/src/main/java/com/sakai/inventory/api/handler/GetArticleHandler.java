@@ -56,11 +56,11 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
                         LOGGER.info("Get article request completed.");
                         String jsonDocument = document.toJson();
                         LOGGER.debug("Returned articles payload: {}", jsonDocument);
-                        return ResponseUtil.createApiResponse(HttpStatusCode.OK, jsonDocument, ResponseUtil.createHeaders());
+                        return ResponseUtil.createApiResponse(HttpStatusCode.OK, jsonDocument, ResponseUtil.createExpandedHeader());
                     })
                     .orElseGet(() -> {
                                 LOGGER.info("Article not found.");
-                                return ResponseUtil.createApiResponse(HttpStatusCode.NOT_FOUND, null, ResponseUtil.createHeaders());
+                        return ResponseUtil.createApiResponse(HttpStatusCode.NOT_FOUND, null, ResponseUtil.createExpandedHeader());
                             }
                     );
         } catch (Exception e) {
