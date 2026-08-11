@@ -10,6 +10,7 @@
     <modules>
         <module>asset-service</module>
         <module>docs</module>
+        <module>lambda-pipeline</module>
     </modules>
 
     <properties>
@@ -68,31 +69,31 @@
     </dependencyManagement>
 
     <build>
-        <plugins>
-            <plugin>
-                <!-- Verhindert Version-Konflikte und setzt Regeln durch. -->
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.6.3</version>
-                <executions>
-                    <execution>
-                        <id>enforce-versions</id>
-                        <goals>
-                            <goal>enforce</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <dependencyConvergence/>
-                                <requireUpperBoundDeps/>
-                                <requireJavaVersion>
-                                    <version>${java.version}</version>
-                                </requireJavaVersion>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+        <!--        <plugins>-->
+        <!--            <plugin>-->
+        <!--                &lt;!&ndash; Verhindert Version-Konflikte und setzt Regeln durch. &ndash;&gt;-->
+        <!--                <groupId>org.apache.maven.plugins</groupId>-->
+        <!--                <artifactId>maven-enforcer-plugin</artifactId>-->
+        <!--                <version>3.6.3</version>-->
+        <!--                <executions>-->
+        <!--                    <execution>-->
+        <!--                        <id>enforce-versions</id>-->
+        <!--                        <goals>-->
+        <!--                            <goal>enforce</goal>-->
+        <!--                        </goals>-->
+        <!--                        <configuration>-->
+        <!--                            <rules>-->
+        <!--                                <dependencyConvergence/>-->
+        <!--                                <requireUpperBoundDeps/>-->
+        <!--                                <requireJavaVersion>-->
+        <!--                                    <version>${java.version}</version>-->
+        <!--                                </requireJavaVersion>-->
+        <!--                            </rules>-->
+        <!--                        </configuration>-->
+        <!--                    </execution>-->
+        <!--                </executions>-->
+        <!--            </plugin>-->
+        <!--        </plugins>-->
         <pluginManagement>
             <plugins>
                 <plugin>

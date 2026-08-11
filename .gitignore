@@ -108,3 +108,5 @@ credentials.json
 **/env.json
 /DOC/functions.json
 /asset-service/events/
+cdk.out
+**/cdk.out/
