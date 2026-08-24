@@ -1,7 +1,7 @@
 package com.sakai.inventory.api.factory;
 
-import com.sakai.inventory.api.model.Article;
-import com.sakai.inventory.api.model.DynamicFieldValue;
+import com.sakai.inventory.domain.model.Article;
+import com.sakai.inventory.domain.model.DynamicFieldValue;
 
 import java.util.HashMap;
 import java.util.List;
@@ -197,7 +197,6 @@ public class DummyDataFactory {
         article.setSku(sku);
         //article.setArticleId(articleId);
         article.setDescription(description);
-        article.setPrice(Integer.parseInt(price));
         article.setStock(inventory);
         article.setImageUrl(imageUrl);
         article.setState(state);

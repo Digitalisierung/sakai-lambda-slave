@@ -1,4 +1,4 @@
-package mapper;
+package com.sakai.inventory.infrastructure.mapper;
 
 //import org.mapstruct.factory.Mappers;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;

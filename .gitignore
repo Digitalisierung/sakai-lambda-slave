@@ -81,6 +81,10 @@ Desktop.ini
 *.lst
 pom.properties
 *.log
+*.png
+*.jpeg
+*.png
+*.gif
 
 #######################################
 # Lambda
@@ -103,3 +107,6 @@ credentials.json
 /asset-service/env.json
 **/env.json
 /DOC/functions.json
+/asset-service/events/
+cdk.out
+**/cdk.out/

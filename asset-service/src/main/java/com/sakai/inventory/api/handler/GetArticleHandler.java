@@ -4,30 +4,76 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import dao.CreateKhachiDao;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
-import utility.Utility;
+import com.sakai.inventory.domain.service.GetArticleService;
+import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
+import com.sakai.inventory.infrastructure.repository.ArticleRepository;
+import com.sakai.inventory.infrastructure.repository.DynamoDbArticleRepository;
+import com.sakai.inventory.shared.exception.ExceptionHandler;
+import com.sakai.inventory.shared.util.ResponseUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.util.Map;
 
+/**
+ * Lambda handler for getting a single article by ID.
+ * <p>
+ * GET /articles/{id}
+ */
 public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private CreateKhachiDao transactionDao;
+    private static final Logger LOGGER = LoggerFactory.getLogger(GetArticleHandler.class);
 
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        String body = input.getBody();
-        String str = "Hello from Lambda!";
-        try {
-            Map map = Utility.objectMapper.readValue(body, Map.class);
-            PutItemRequest request = PutItemRequest.builder().build();
-            Map<String, AttributeValue> responseItems = this.transactionDao.createNewKhachi(request);
+    private final GetArticleService getArticleService;
 
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+    public GetArticleHandler() {
+        super();
+        getArticleService = new GetArticleService(createArticleRepository());
+    }
+
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
+        LOGGER.info("Get article request received.");
+        LOGGER.debug("path: {}", requestEvent.getPath());
+
+        // extract path param
+        Map<String, String> pathParameters = requestEvent.getPathParameters();
+        if (pathParameters == null || !pathParameters.containsKey("id")) {
+            LOGGER.warn("Missing required path parameter: id.");
+            return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing required path parameter: article ID");
         }
 
-        return response;
+        String articleId = pathParameters.get("id");
+
+        // find article
+        try {
+            LOGGER.info(" Fetching article by id: {}", articleId);
+            return getArticleService.findArticleById(articleId)
+                    .map(document -> {
+                        LOGGER.info("Get article request completed.");
+                        String jsonDocument = document.toJson();
+                        LOGGER.debug("Returned articles payload: {}", jsonDocument);
+                        return ResponseUtil.createApiResponse(HttpStatusCode.OK, jsonDocument, ResponseUtil.createExpandedHeader());
+                    })
+                    .orElseGet(() -> {
+                                LOGGER.info("Article not found.");
+                        return ResponseUtil.createApiResponse(HttpStatusCode.NOT_FOUND, null, ResponseUtil.createExpandedHeader());
+                            }
+                    );
+        } catch (Exception e) {
+            String logMessage = String.format("Failed to handle get article request. Article ID=%s", articleId);
+            LOGGER.error(logMessage, e);
+            return ExceptionHandler.handleException(e);
+        }
+    }
+
+    private ArticleRepository createArticleRepository() {
+        DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
+        TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
+        String tableName = DynamoDbFactory.getTableName();
+        return new DynamoDbArticleRepository(enhancedClient, tableName, tableSchema);
     }
 }

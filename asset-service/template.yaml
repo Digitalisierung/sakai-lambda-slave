@@ -118,11 +118,10 @@ Resources:
   InventoryCatalogs:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName:
-        !Sub '${AWS::StackName}-inventory-catalogs'
+      TableName: InventoryCatalogs
       BillingMode: PAY_PER_REQUEST
       PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true # Das ist Backup der Datenbank. Relevant nur für Prod.
+        PointInTimeRecoveryEnabled: false # Das ist Backup der Datenbank. Relevant nur für Prod.
       TimeToLiveSpecification: ## AWS sagt, wenn Daten länger als maximal 12 Monate nicht angerürt wurden, sollten diese irgendwo anders gespeichert werden - nicht in DynamoDB, sondern in S3, zum Beispiel. Dafür ist TTL da. Keine Pflicht, aber AWS Recomendation.
         AttributeName: ttl
         Enabled: true
@@ -131,7 +130,9 @@ Resources:
           AttributeType: S
         - AttributeName: sortKey
           AttributeType: S
-        - AttributeName: SKU
+        - AttributeName: catalogId
+          AttributeType: S
+        - AttributeName: entityType
           AttributeType: S
       KeySchema:
         - AttributeName: partitionKey
@@ -139,10 +140,20 @@ Resources:
         - AttributeName: sortKey
           KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: SKU-index
+        - IndexName: GSI_entityType
           KeySchema:
-            - AttributeName: SKU
+            - AttributeName: entityType
               KeyType: HASH
+            - AttributeName: sortKey
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI_ItemsInCatalogs
+          KeySchema:
+            - AttributeName: catalogId
+              KeyType: HASH
+            - AttributeName: sortKey
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
 Outputs:

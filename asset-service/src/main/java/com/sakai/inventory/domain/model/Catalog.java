@@ -1,4 +1,4 @@
-package com.sakai.inventory.api.model;
+package com.sakai.inventory.domain.model;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;

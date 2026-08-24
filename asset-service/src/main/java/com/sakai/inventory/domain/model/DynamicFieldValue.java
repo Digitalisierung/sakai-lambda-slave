@@ -1,4 +1,4 @@
-package com.sakai.inventory.api.model;
+package com.sakai.inventory.domain.model;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 
@@ -9,6 +9,7 @@ public class DynamicFieldValue {
     private String value; // Eigentlicher Inhalt.
 
     public DynamicFieldValue() {
+        super();
     }
 
     public String getName() {

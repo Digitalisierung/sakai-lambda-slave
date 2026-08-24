@@ -10,6 +10,7 @@
     <modules>
         <module>asset-service</module>
         <module>docs</module>
+        <module>lambda-pipeline</module>
     </modules>
 
     <properties>
@@ -18,5 +19,134 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.bild.sourceEncoding>UTF-8</project.bild.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <aws-lambda.version>1.4.0</aws-lambda.version>
+        <aws-lambda-events.version>3.16.1</aws-lambda-events.version>
+        <aws-lambda-log4j2.version>1.6.4</aws-lambda-log4j2.version>
+
+        <hibernate-validator.version>9.1.0.Final</hibernate-validator.version>
+
+        <junit-jupiter-engine.version>6.0.2</junit-jupiter-engine.version>
+        <mockito-junit-jupiter.version>5.21.0</mockito-junit-jupiter.version>
+        <assertj-core.version>3.27.7</assertj-core.version>
+
+        <aws.sdk.version>2.41.14</aws.sdk.version>
+        <log4j.version>2.25.4</log4j.version>
+        <slf4j.version>1.7.36</slf4j.version>
+        <jackson.version>2.17.0</jackson.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.41.14</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-bom</artifactId>
+                <version>${log4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <!--        <plugins>-->
+        <!--            <plugin>-->
+        <!--                &lt;!&ndash; Verhindert Version-Konflikte und setzt Regeln durch. &ndash;&gt;-->
+        <!--                <groupId>org.apache.maven.plugins</groupId>-->
+        <!--                <artifactId>maven-enforcer-plugin</artifactId>-->
+        <!--                <version>3.6.3</version>-->
+        <!--                <executions>-->
+        <!--                    <execution>-->
+        <!--                        <id>enforce-versions</id>-->
+        <!--                        <goals>-->
+        <!--                            <goal>enforce</goal>-->
+        <!--                        </goals>-->
+        <!--                        <configuration>-->
+        <!--                            <rules>-->
+        <!--                                <dependencyConvergence/>-->
+        <!--                                <requireUpperBoundDeps/>-->
+        <!--                                <requireJavaVersion>-->
+        <!--                                    <version>${java.version}</version>-->
+        <!--                                </requireJavaVersion>-->
+        <!--                            </rules>-->
+        <!--                        </configuration>-->
+        <!--                    </execution>-->
+        <!--                </executions>-->
+        <!--            </plugin>-->
+        <!--        </plugins>-->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.4.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.14.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>3.5.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.6.1</version>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>":"</artifact>
+                                <excludes>
+                                    <exclude>module-info.class</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>

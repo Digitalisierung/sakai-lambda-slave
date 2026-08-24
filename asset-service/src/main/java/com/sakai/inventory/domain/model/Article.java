@@ -1,4 +1,4 @@
-package com.sakai.inventory.api.model;
+package com.sakai.inventory.domain.model;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
@@ -10,10 +10,10 @@ public class Article {
 
     private String partitionKey;
     private String sortKey;
+    private String entityType;
     private String sku;
     private String name;
     private String description;
-    private Integer price;
     private Integer stock;
     private String imageUrl;
     private String state;
@@ -45,6 +45,14 @@ public class Article {
 
     public void setSortKey(String sortKey) {
         this.sortKey = sortKey;
+    }
+
+    public String getEntityType() {
+        return entityType;
+    }
+
+    public void setEntityType(String entityType) {
+        this.entityType = entityType;
     }
 
     public void setCatalogId(String catalogId) {
@@ -99,14 +107,6 @@ public class Article {
         this.name = name;
     }
 
-    public Integer getPrice() {
-        return price;
-    }
-
-    public void setPrice(Integer price) {
-        this.price = price;
-    }
-
     public void setSku(String sku) {
         this.sku = sku;
     }
@@ -147,6 +147,7 @@ public class Article {
         return "Article{" +
                 "partitionKey='" + partitionKey + '\'' +
                 ", sortKey='" + sortKey + '\'' +
+                ", entityType=" + entityType +
                 ", catalogId='" + catalogId + '\'' +
                 ", createdAt='" + createdAt + '\'' +
                 ", description='" + description + '\'' +
@@ -154,7 +155,6 @@ public class Article {
                 ", stock=" + stock +
                 ", isFeatured=" + isFeatured +
                 ", name='" + name + '\'' +
-                ", price=" + price +
                 ", sku='" + sku + '\'' +
                 ", state='" + state + '\'' +
                 ", updatedAt='" + updatedAt + '\'' +

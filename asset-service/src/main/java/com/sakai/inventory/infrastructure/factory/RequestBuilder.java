@@ -1,4 +1,4 @@
-package builder;
+package com.sakai.inventory.infrastructure.factory;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
