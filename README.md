@@ -1,3 +1,5 @@
+catalog-service angelegt (24.08.2026)
+
 # sakai-lambda-slave
 Backend service for sakai-ng-master.
 

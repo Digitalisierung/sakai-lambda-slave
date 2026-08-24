@@ -11,6 +11,7 @@
         <module>asset-service</module>
         <module>docs</module>
         <module>lambda-pipeline</module>
+        <module>catalog-service</module>
     </modules>
 
     <properties>
