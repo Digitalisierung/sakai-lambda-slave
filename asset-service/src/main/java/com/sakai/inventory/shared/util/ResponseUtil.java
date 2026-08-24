@@ -31,7 +31,7 @@ public final class ResponseUtil {
         Map<String, String> headers = ResponseUtil.createHeader();
         headers.put("Access-Control-Allow-Origin", "*");
         headers.put("Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token");
-        headers.put("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+        headers.put("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD");
         return headers;
     }
 
