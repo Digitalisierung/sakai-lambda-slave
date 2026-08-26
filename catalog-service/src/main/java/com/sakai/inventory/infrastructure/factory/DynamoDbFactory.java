@@ -1,0 +1,65 @@
+package com.sakai.inventory.infrastructure.factory;
+
+import com.sakai.inventory.domain.model.Catalog;
+import com.sakai.inventory.shared.util.EnvironmentLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+
+public final class DynamoDbFactory {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbFactory.class);
+
+    private static final DynamoDbClient DYNAMO_DB_CLIENT = DynamoDbClient.builder()
+            .httpClient(AwsCrtHttpClient.create())
+            .build();
+
+    private static final DynamoDbEnhancedClient ENHANCED_CLIENT = DynamoDbEnhancedClient.builder()
+            .dynamoDbClient(DYNAMO_DB_CLIENT)
+            .build();
+
+    private DynamoDbFactory() {
+        super();
+    }
+
+    /**
+     * Get or create DynamoDb client instance.
+     *
+     * @return DynamoDbClient
+     */
+    public static DynamoDbClient createDynamoDbClient() {
+        return DYNAMO_DB_CLIENT;
+    }
+
+    /**
+     * Get or create DynamoDb Enhanced client instance.
+     *
+     * @return DynamoDbEnhancedClient
+     */
+    public static DynamoDbEnhancedClient createEnhancedClient() {
+        return ENHANCED_CLIENT;
+    }
+
+    /**
+     * Get table name from environment variable.
+     *
+     * @return String
+     */
+    public static String getTableName() {
+        String tableName = EnvironmentLoader.getEnv("TABLE_NAME");
+        LOGGER.info("Using table name: {}", tableName);
+
+        if (tableName == null || tableName.isBlank()) {
+            throw new IllegalStateException("TABLE_NAME environment variable is not set.");
+        }
+
+        return tableName;
+    }
+
+    public static TableSchema<Catalog> createTableSchema() {
+        LOGGER.debug("Table Schema will be created.");
+        return TableSchema.fromBean(Catalog.class);
+    }
+}

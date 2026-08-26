@@ -110,3 +110,4 @@ credentials.json
 /asset-service/events/
 cdk.out
 **/cdk.out/
+**/events/

@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless application template for asset service.
+Globals:
+  Function:
+    Timeout: 20
+    MemorySize: 1024
+    Runtime: java21
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref InventoryCatalogs
+Resources:
+  #########################################
+  # API Gateway
+  #########################################
+  InventoryApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration:
+        Type: REGIONAL
+      Name:
+        !Sub '${AWS::StackName}-inventory-api'
+      Cors:
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+        AllowOrigin: '*'
+  #########################################
+  # IAM Roles
+  #########################################
+  ListCatalogsHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccess
+          PolicyDocument:
+            Version: '2012-1017'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt
+
+                    #########################################
+                    # Handlers
+                  #########################################
+  ListCatalogsHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.ListCatalogsHandler::handleRequest
+      Role: !GetAtt ListCatalogsHandlerServiceRole.Arn
+      Events:
+        ListCatalogsApi:
+          Type: Api
+          Properties:
+            Path: /catalogs
+            Method: get
+            RestApiId: !Ref InventoryApi
+  #########################################
+  # DynamoDB Table
+  #########################################
+  InventoryCatalogs:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: InventoryCatalogs
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false # Das ist Backup der Datenbank. Relevant nur für Prod.
+      TimeToLiveSpecification: ## AWS sagt, wenn Daten länger als maximal 12 Monate nicht angerürt wurden, sollten diese irgendwo anders gespeichert werden - nicht in DynamoDB, sondern in S3, zum Beispiel. Dafür ist TTL da. Keine Pflicht, aber AWS Recomendation.
+        AttributeName: ttl
+        Enabled: true
+      AttributeDefinitions:
+        - AttributeName: partitionKey
+          AttributeType: S
+        - AttributeName: sortKey
+          AttributeType: S
+        - AttributeName: catalogId
+          AttributeType: S
+        - AttributeName: entityType
+          AttributeType: S
+      KeySchema:
+        - AttributeName: partitionKey
+          KeyType: HASH
+        - AttributeName: sortKey
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI_entityType
+          KeySchema:
+            - AttributeName: entityType
+              KeyType: HASH
+            - AttributeName: sortKey
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI_ItemsInCatalogs
+          KeySchema:
+            - AttributeName: catalogId
+              KeyType: HASH
+            - AttributeName: sortKey
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL for Prod stage.
+    Value: !Sub 'http://${InventoryApi}.execute-api.localhost.localstack.cloud:4566/Prod'
+  ListCatalogsHandlerServiceRole:
+    Description: The ARN of the IAM role created for the ListCatalogsHandler.
+    Value: !GetAtt ListCatalogsHandlerServiceRole.Arn
+  InventoryCatalogsTable:
+    Description: The name of the DynamoDB table.
+    Value: !Ref InventoryCatalogs
+  InventoryCatalogsTableArn:
+    Description: The ARN of the DynamoDB table.
+    Value: !GetAtt InventoryCatalogs.Arn
+  ListCatalogsHandlerName:
+    Description: The name of the Lambda Function.
+    Value: !Ref ListCatalogsHandler
+  ListCatalogsHandlerArn:
+    Description: The ARN of Lambda Function.
+    Value: !GetAtt ListCatalogsHandler.Arn

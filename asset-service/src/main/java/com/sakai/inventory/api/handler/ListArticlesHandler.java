@@ -28,7 +28,7 @@ public class ListArticlesHandler implements RequestHandler<APIGatewayProxyReques
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 100;
 
-    private ListArticlesService articlesService;
+    private final ListArticlesService articlesService;
 
     public ListArticlesHandler() {
         super();
