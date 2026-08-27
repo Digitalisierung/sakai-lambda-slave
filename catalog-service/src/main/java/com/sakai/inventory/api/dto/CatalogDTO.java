@@ -1,7 +1,7 @@
 package com.sakai.inventory.api.dto;
 
 public record CatalogDTO(
-        String catalogId,
+        String id,
         String name,
         String description,
         String color,
