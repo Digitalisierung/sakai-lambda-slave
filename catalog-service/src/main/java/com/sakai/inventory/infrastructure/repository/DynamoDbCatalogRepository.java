@@ -16,9 +16,14 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class DynamoDbCatalogRepository implements CatalogRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbCatalogRepository.class);
+
+    private static final String GSI_ENTITY_TYPE = "GSI_entityType";
+    private static final String GSI_PARTITION_KEY = "INDEX";
+    private static final String GSI_SORT_KEY = "METADATA#";
 
     private final DynamoDbTable<Catalog> dynamoDbTable;
 
@@ -28,12 +33,23 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
     }
 
     @Override
+    public Optional<Catalog> findCatalogById(String id) {
+        Key key = Key.builder()
+                .partitionValue("ACC#default__CAT#" + id)
+                .sortValue("METADATA#")
+                .build();
+
+        Catalog catalog = dynamoDbTable.getItem(key);
+        return Optional.ofNullable(catalog);
+    }
+
+    @Override
     public PaginatedResult<Catalog> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey) {
         LOGGER.debug("Paginated querying (all) catalogs using GSI_entityType. Limit {}", limit);
 
         QueryConditional queryConditional = QueryConditional.sortBeginsWith(Key.builder()
-                .partitionValue("INDEX")
-                .sortValue("METADATA#")
+                .partitionValue(GSI_PARTITION_KEY)
+                .sortValue(GSI_SORT_KEY)
                 .build());
 
         QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
@@ -42,7 +58,7 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
                 .limit(limit)
                 .build();
 
-        Iterator<Page<Catalog>> iterator = dynamoDbTable.index("GSI_entityType")
+        Iterator<Page<Catalog>> iterator = dynamoDbTable.index(GSI_ENTITY_TYPE)
                 .query(queryRequest)
                 .iterator();
 

@@ -5,12 +5,22 @@ import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Repository interface for catalog domain objects.
  * Provides domain-oriented operations for catalog management.
  */
 public interface CatalogRepository {
+
+    /**
+     * Find catalog by its unique identifier.
+     *
+     * @param id equal .
+     * @return Optional<Catalog>
+     */
+    Optional<Catalog> findCatalogById(String id);
+
     /**
      * Find all catalogs with pagination support.
      *
