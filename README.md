@@ -1,5 +1,11 @@
 catalog-service angelegt (24.08.2026)
 
+Template-Validierung mit `sam validate`
+
+Event generieren: `sam local generate-event apigateway aws-proxy > list-catalogs-event.json`
+
+Im Infrastructure Projekt wird REST Api erstellt und konfiguriert, nicht HTTP Api.
+
 # sakai-lambda-slave
 Backend service for sakai-ng-master.
 

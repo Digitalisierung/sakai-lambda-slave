@@ -14,6 +14,10 @@ public class Catalog {
     private String color;
     private Boolean rendered;
 
+    public Catalog() {
+        super();
+    }
+
     public Catalog(String name) {
         this.name = name;
     }

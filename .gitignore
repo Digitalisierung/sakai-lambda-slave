@@ -111,3 +111,4 @@ credentials.json
 cdk.out
 **/cdk.out/
 **/events/
+**/.aws-sam/
