@@ -4,11 +4,15 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.sakai.inventory.api.dto.CatalogDTO;
 import com.sakai.inventory.domain.model.Catalog;
 import com.sakai.inventory.domain.service.GetCatalogService;
 import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.repository.CatalogRepository;
 import com.sakai.inventory.infrastructure.repository.DynamoDbCatalogRepository;
+import com.sakai.inventory.shared.exception.ExceptionHandler;
+import com.sakai.inventory.shared.util.JsonUtil;
 import com.sakai.inventory.shared.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +43,35 @@ public class GetCatalogHandler implements RequestHandler<APIGatewayProxyRequestE
             LOGGER.warn("Missing required path parameter: id");
             return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing required path parameter: catalog ID");
         }
-        return null;
+
+        String catalogId = pathParameters.get("id");
+        try {
+            LOGGER.info("Fetching catalog by id: {}", catalogId);
+            return this.catalogService.findCatalogById(catalogId)
+                    .map(this::buildSuccessResponse)
+                    .orElseGet(this::buildNotFoundResponse);
+        } catch (Exception e) {
+            String logMessage = String.format("Failed to handle get catalog request. Catalog ID=%s", catalogId);
+            LOGGER.error(logMessage, e);
+            return ExceptionHandler.handleException(e);
+        }
+    }
+
+    private APIGatewayProxyResponseEvent buildNotFoundResponse() {
+        LOGGER.info("Catalog not found.");
+        return ResponseUtil.createApiResponse(HttpStatusCode.NOT_FOUND, null, ResponseUtil.createExpandedHeader());
+    }
+
+    private APIGatewayProxyResponseEvent buildSuccessResponse(CatalogDTO catalog) {
+        try {
+            LOGGER.info("Get catalog request completed.");
+            String body = JsonUtil.convertToJson(catalog);
+            LOGGER.debug("Returning catalog: {}", catalog);
+            return ResponseUtil.createApiResponse(HttpStatusCode.OK, body, ResponseUtil.createExpandedHeader());
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Failed to convert catalog to JSON", e);
+            return ResponseUtil.createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR, "Failed to process response");
+        }
     }
 
     private CatalogRepository createCatalogRepository() {

@@ -54,17 +54,43 @@ Resources:
       Policies:
         - PolicyName: DynamoDbAccess
           PolicyDocument:
-            Version: '2012-1017'
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - dynamodb:Query
                 Resource:
-                  - !GetAtt
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+  GetCatalogHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccessTwo
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
 
-                    #########################################
-                    # Handlers
-                  #########################################
+  #########################################
+  # Handlers
+  #########################################
   ListCatalogsHandler:
     Type: AWS::Serverless::Function
     Properties:
@@ -76,6 +102,19 @@ Resources:
           Type: Api
           Properties:
             Path: /catalogs
+            Method: get
+            RestApiId: !Ref InventoryApi
+  GetCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.GetCatalogHandler::handleRequest
+      Role: !GetAtt GetCatalogHandlerServiceRole.Arn
+      Events:
+        GetCatalogApi:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}
             Method: get
             RestApiId: !Ref InventoryApi
   #########################################
