@@ -22,7 +22,7 @@ phases:
   post_build:
     commands:
       - echo verifies JAR, uploads artifact to S3, and stores its location as SSM parameters.
-      - ls -l asset-sevice/target/
+      - ls -l asset-service/target/
       - ls -l catalog-service/target/
       - jar tf asset-service/target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
       - jar tf catalog-service/target/catalog-service-lambda.jar | grep ListCatalogsHandler || echo "❌ Klasse nicht gefunden!"
