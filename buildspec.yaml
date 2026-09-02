@@ -15,23 +15,28 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Compiling and packaging the project...
-      - cd asset-service/
+      # - cd asset-service/
       # Führt den Build vom Root aus durch.
       # Da du den Shade-Plugin nutzt, wird hier das "Fat Jar" erstellt.
       - mvn clean package -Dmaven.test.skip=true
   post_build:
     commands:
       - echo verifies JAR, uploads artifact to S3, and stores its location as SSM parameters.
-      - ls -l target/
-      - jar tf target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
-      - aws s3 cp target/asset-service-lambda.jar s3://${S3_LAMBDA_ART_BUCKET}/asset-service-lambda.jar
+      - ls -l asset-sevice/target/
+      - ls -l catalog-service/target/
+      - jar tf asset-service/target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
+      - jar tf catalog-service/target/catalog-service-lambda.jar | grep ListCatalogsHandler || echo "❌ Klasse nicht gefunden!"
+      - aws s3 cp asset-service/target/asset-service-lambda.jar s3://${S3_LAMBDA_ART_BUCKET}/asset-service-lambda.jar
+      - aws s3 cp catalog-service/target/catalog-service-lambda.jar s3://${S3_LAMBDA_ART_BUCKET}/catalog-service-lambda.jar
       - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-bucket-name" --value "${S3_LAMBDA_ART_BUCKET}" --type String --overwrite
-      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-key" --value "asset-service-lambda.jar" --type String --overwrite
+      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/asset-service/artifact-key" --value "asset-service-lambda.jar" --type String --overwrite
+      - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/catalog-service/artifact-key" --value "catalog-service-lambda.jar" --type String --overwrite
 artifacts:
   files:
     # Hier geben wir an, wo die fertige JAR liegt.
     # Da 'asset-service' ein Untermodul ist, liegt es in dessen target-Ordner.
     - asset-service/target/asset-service-lambda.jar
+    - catalog-service/target/catalog-service-lambda.jar
 
   # 'yes' sorgt dafür, dass die Ordnerstruktur (asset-service/target/) im S3 entfernt wird
   # und nur die reine Datei dort landet.

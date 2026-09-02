@@ -1,0 +1,255 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless application template for asset service.
+Globals:
+  Function:
+    Timeout: 20
+    MemorySize: 1024
+    Runtime: java21
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        REGION: !Ref AWS::Region
+        TABLE_NAME: !Ref InventoryCatalogs
+
+Resources:
+  #########################################
+  # API Gateway
+  #########################################
+  InventoryApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration:
+        Type: REGIONAL
+      Name:
+        !Sub '${AWS::StackName}-inventory-api'
+      Cors:
+        AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+        AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+        AllowOrigin: "'*'"
+  #########################################
+  # IAM Roles
+  #########################################
+  ListArticlesHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccessOne
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+  GetArticleHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccessTwo
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:GetItem
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+  ListCatalogsHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccessThree
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+  GetCatalogHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccessFour
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
+
+  #########################################
+  # Handlers
+  #########################################
+  GetArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: asset-service/
+      Handler: com.sakai.inventory.api.handler.GetArticleHandler::handleRequest
+      Role: !GetAtt GetArticleHandlerRole.Arn
+      Events:
+        GetArticleApi:
+          Type: Api
+          Properties:
+            Path: /articles/{id}
+            Method: get
+            RestApiId: !Ref InventoryApi
+  ListArticlesHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: asset-service/
+      Handler: com.sakai.inventory.api.handler.ListArticlesHandler::handleRequest
+      Role: !GetAtt ListArticlesHandlerServiceRole.Arn
+      Events:
+        ListArticlesApi:
+          Type: Api
+          Properties:
+            Path: /articles
+            Method: get
+            RestApiId: !Ref InventoryApi
+  ListCatalogsHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: catalog-service/
+      Handler: com.sakai.inventory.api.handler.ListCatalogsHandler::handleRequest
+      Role: !GetAtt ListCatalogsHandlerServiceRole.Arn
+      Events:
+        ListCatalogsApi:
+          Type: Api
+          Properties:
+            Path: /catalogs
+            Method: get
+            RestApiId: !Ref InventoryApi
+  GetCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: catalog-service/
+      Handler: com.sakai.inventory.api.handler.GetCatalogHandler::handleRequest
+      Role: !GetAtt GetCatalogHandlerServiceRole.Arn
+      Events:
+        GetCatalogApi:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}
+            Method: get
+            RestApiId: !Ref InventoryApi
+
+  #########################################
+  # DynamoDB Table
+  #########################################
+  InventoryCatalogs:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: InventoryCatalogs
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false # Das ist Backup der Datenbank. Relevant nur für Prod.
+      TimeToLiveSpecification: ## AWS sagt, wenn Daten länger als maximal 12 Monate nicht angerürt wurden, sollten diese irgendwo anders gespeichert werden - nicht in DynamoDB, sondern in S3, zum Beispiel. Dafür ist TTL da. Keine Pflicht, aber AWS Recomendation.
+        AttributeName: ttl
+        Enabled: true
+      AttributeDefinitions:
+        - AttributeName: partitionKey
+          AttributeType: S
+        - AttributeName: sortKey
+          AttributeType: S
+        - AttributeName: catalogId
+          AttributeType: S
+        - AttributeName: entityType
+          AttributeType: S
+      KeySchema:
+        - AttributeName: partitionKey
+          KeyType: HASH
+        - AttributeName: sortKey
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI_entityType
+          KeySchema:
+            - AttributeName: entityType
+              KeyType: HASH
+            - AttributeName: sortKey
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI_ItemsInCatalogs
+          KeySchema:
+            - AttributeName: catalogId
+              KeyType: HASH
+            - AttributeName: sortKey
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway basic endpoint URL (Prod Stage).
+    Value: !Sub 'http://${InventoryApi}.execute-api.localhost.localstack.cloud:4566/Prod'
+    # Value: !Sub 'http://${InventoryApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+    # Value: !Sub 'http://localhost:4566/restapis/${InventoryApi}/Prod/_user_request_/articles'
+  GetArticleHandlerArn:
+    Description: GetArticleHandler Function ARN.
+    Value: !GetAtt GetArticleHandler.Arn
+  GetArticleHandlerIamRole:
+    Description: IAM Role created for GetArticleHandler function.
+    Value: !GetAtt GetArticleHandlerRole.Arn
+  ListArticlesHandlerArn:
+    Description: ListArticlesHandler Lambda Function ARN.
+    Value: !GetAtt ListArticlesHandler.Arn
+  ListArticlesHandlerIamRole:
+    Description: IAM Role created for ListArticlesHandler function.
+    Value: !GetAtt ListArticlesHandlerServiceRole.Arn
+  DynamoDbTableName:
+    Description: Name of DynamoDB table.
+    Value: !Ref InventoryCatalogs
