@@ -13,9 +13,17 @@ import java.util.List;
 public interface CatalogMapper {
     CatalogMapper MAPPER = Mappers.getMapper(CatalogMapper.class);
 
-    @Mapping(target = "id", source = "partitionKey")
+    @Mapping(target = "id", expression = "java(extractId(entity.getPartitionKey()))")
     @Mapping(target = "productCount", constant = "0")
     CatalogDTO toDTO(Catalog entity);
 
     List<CatalogDTO> toDomainList(List<Catalog> entities);
+
+    default String extractId(String partitionKey) {
+        if (partitionKey == null || partitionKey.isBlank()) {
+            return partitionKey;
+        }
+
+        return partitionKey.substring(partitionKey.lastIndexOf("#") + 1);
+    }
 }

@@ -30,7 +30,8 @@ public class LambdaBuildPipelineStack extends Stack {
     private Pipeline backendPipeline;
 
     private StringParameter bucketNameParameter;
-    private StringParameter jarKeyParameter;
+    private StringParameter assetServiceJarKey;
+    private StringParameter catalogServiceJarKey;
 
     // TODO: eine Lösung überlegen - zentraler Konfigurationsort (oder Datei) für ORG und REPO.
     private static final String ORGANISATION = "Digitalisierung";
@@ -76,13 +77,22 @@ public class LambdaBuildPipelineStack extends Stack {
 
 
         StringParameterProps jarKeyParamProps = StringParameterProps.builder()
-                .parameterName("/sakai/" + stageConfig.stageName() + "/lambda/artifact-key")
+                .parameterName("/sakai/" + stageConfig.stageName() + "/lambda/asset-service/artifact-key")
                 .stringValue("asset-service-lambda.jar")
                 .dataType(ParameterDataType.TEXT)
                 .description("S3-Objektschlüssel (Key) der Lambda-JAR-Datei im Artefakt-Bucket. Name der JAR-Datei.")
                 .build();
 
-        this.jarKeyParameter = new StringParameter(this, "JarKeyParameterID", jarKeyParamProps);
+        this.assetServiceJarKey = new StringParameter(this, "JarKeyParameterID", jarKeyParamProps);
+
+        StringParameterProps catServiceJarKeyParamProps = StringParameterProps.builder()
+                .parameterName("/sakai/" + stageConfig.stageName() + "/lambda/catalog-service/artifact-key")
+                .stringValue("catalog-service-lambda.jar")
+                .dataType(ParameterDataType.TEXT)
+                .description("Name der JAR-Datei. Catalog-Service JAR.")
+                .build();
+
+        this.catalogServiceJarKey = new StringParameter(this, "CatalogServiceJarKeyParameterId", catServiceJarKeyParamProps);
     }
 
     public Bucket getLambdaArtifactBucket() {
@@ -212,7 +222,9 @@ public class LambdaBuildPipelineStack extends Stack {
                         lambdaArtifactBucket.getBucketArn(),
                         lambdaArtifactBucket.getBucketArn() + "/*",
                         bucketNameParameter.getParameterArn(),
-                        jarKeyParameter.getParameterArn()))
+                        assetServiceJarKey.getParameterArn(),
+                        catalogServiceJarKey.getParameterArn()
+                ))
                 .build();
 
         RoleProps roleProps = RoleProps.builder()
