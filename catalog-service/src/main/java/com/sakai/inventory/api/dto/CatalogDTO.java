@@ -7,6 +7,7 @@ public record CatalogDTO(
         String color,
         Integer productCount,
         String createdAt,
-        String updatedAt
+        String updatedAt,
+        Boolean rendered
 ) {
 }

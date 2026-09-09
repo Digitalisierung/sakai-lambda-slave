@@ -17,6 +17,12 @@ public interface CatalogMapper {
     @Mapping(target = "productCount", constant = "0")
     CatalogDTO toDTO(Catalog entity);
 
+    @Mapping(target = "partitionKey", source = "id")
+    @Mapping(target = "sortKey", ignore = true)
+    @Mapping(target = "rendered", ignore = true)
+    @Mapping(target = "entityType", constant = "INDEX")
+    Catalog toCatalogEntity(CatalogDTO dto);
+
     List<CatalogDTO> toDomainList(List<Catalog> entities);
 
     default String extractId(String partitionKey) {
