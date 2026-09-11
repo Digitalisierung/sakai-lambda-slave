@@ -4,14 +4,10 @@ import com.sakai.inventory.domain.model.Catalog;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.model.Page;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +19,9 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
 
     private static final String GSI_ENTITY_TYPE = "GSI_entityType";
     private static final String GSI_PARTITION_KEY = "INDEX";
-    private static final String GSI_SORT_KEY = "METADATA#";
+    private static final String GSI_SORT_KEY = "METADATA";
+    private static final String SORT_KEY = "METADATA";
+    private static final String ACCOUNT_ID = "ACC#default__CAT";
 
     private final DynamoDbTable<Catalog> dynamoDbTable;
 
@@ -33,11 +31,37 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
     }
 
     @Override
+    public Catalog updateCatalog(String catalogId, Catalog catalog) {
+        String partitionKey = ACCOUNT_ID + "#" + catalogId;
+        String sortKey = SORT_KEY + "#";
+
+        catalog.setPartitionKey(partitionKey);
+        catalog.setSortKey(sortKey);
+
+        LOGGER.debug("DynamoDb catalog update.");
+        LOGGER.debug("Update item: {}", catalog);
+
+        UpdateItemEnhancedRequest<Catalog> request = UpdateItemEnhancedRequest.builder(Catalog.class)
+                .item(catalog)
+                .conditionExpression(Expression.builder()
+                        .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
+                        .build())
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .build();
+
+        UpdateItemEnhancedResponse<Catalog> response = dynamoDbTable.updateItemWithResponse(request);
+        LOGGER.debug("Consumed capacity units: {}", response.consumedCapacity().capacityUnits());
+
+        return response.attributes();
+    }
+
+    @Override
     public Optional<Catalog> findCatalogById(String id) {
         Key key = Key.builder()
                 .partitionValue("ACC#default__CAT#" + id)
-                .sortValue("METADATA#")
+                .sortValue(GSI_SORT_KEY + "#")
                 .build();
+        LOGGER.debug("Finding catalog by id '{}'", key.partitionKeyValue().s());
 
         Catalog catalog = dynamoDbTable.getItem(key);
         return Optional.ofNullable(catalog);
@@ -49,7 +73,7 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
 
         QueryConditional queryConditional = QueryConditional.sortBeginsWith(Key.builder()
                 .partitionValue(GSI_PARTITION_KEY)
-                .sortValue(GSI_SORT_KEY)
+                .sortValue(GSI_SORT_KEY + "#")
                 .build());
 
         QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()

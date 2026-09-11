@@ -29,4 +29,12 @@ public interface CatalogRepository {
      * @return PaginatedResult result with catalogs and next page token.
      */
     PaginatedResult<Catalog> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
+
+    /**
+     *
+     * @param catalogId
+     * @param catalog
+     * @return Catalog
+     */
+    Catalog updateCatalog(String catalogId, Catalog catalog);
 }

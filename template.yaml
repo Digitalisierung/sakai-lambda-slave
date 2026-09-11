@@ -131,6 +131,30 @@ Resources:
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
                   - !Sub '${InventoryCatalogs.Arn}/index/*'
+  UpdateCatalogHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbAccessFour
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
 
   #########################################
   # Handlers
@@ -186,6 +210,19 @@ Resources:
           Properties:
             Path: /catalogs/{id}
             Method: get
+            RestApiId: !Ref InventoryApi
+  UpdateCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: catalog-service/
+      Handler: com.sakai.inventory.api.handler.UpdateCatalogHandler::handleRequest
+      Role: !GetAtt UpdateCatalogHandlerServiceRole.Arn
+      Events:
+        UpdateCatalogApi:
+          Type: Api
+          Properties:
+            Path: /catalogs/{id}
+            Method: put
             RestApiId: !Ref InventoryApi
 
   #########################################
