@@ -3,6 +3,7 @@ package com.sakai.inventory.shared.exception;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.shared.util.ResponseUtil;
 import software.amazon.awssdk.http.HttpStatusCode;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 public class ExceptionHandler {
     private ExceptionHandler() {
@@ -22,6 +23,8 @@ public class ExceptionHandler {
                     ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessException.getMessage());
             case com.fasterxml.jackson.core.JsonProcessingException jsonProcessingException ->
                     ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessingException.getMessage());
+            case ConditionalCheckFailedException conditionalCheckFailedException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.NOT_FOUND, conditionalCheckFailedException.getMessage());
             default -> ResponseUtil.createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR, e.getMessage());
         };
     }

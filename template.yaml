@@ -221,8 +221,8 @@ Resources:
         UpdateCatalogApi:
           Type: Api
           Properties:
-            Path: /catalogs/{id}/articles
-            Method: post
+            Path: /catalogs/{id}
+            Method: put
             RestApiId: !Ref InventoryApi
 
   #########################################

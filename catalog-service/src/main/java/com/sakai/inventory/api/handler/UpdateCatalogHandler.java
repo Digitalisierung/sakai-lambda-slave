@@ -32,16 +32,22 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
+        LOGGER.info("Update catalog request received.");
+        LOGGER.debug("Update catalog request details: Requested path: '{}', RequestId: {}", requestEvent.getPath(), context.getAwsRequestId());
         Map<String, String> pathParam = requestEvent.getPathParameters();
         if (pathParam == null || !pathParam.containsKey("id")) {
+            LOGGER.warn("Missing required path parameter: catalog ID");
             return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing required path parameter: catalog ID");
         }
+        String catalogId = pathParam.get("id");
 
         try {
             String requestBody = requestEvent.getBody();
             CatalogDTO catalogDTO = JsonUtil.parseFromJsonToObject(requestBody, CatalogDTO.class);
-            CatalogDTO updatedCatalog = updateCatalogService.updateCatalog(catalogDTO);
+            CatalogDTO updatedCatalog = updateCatalogService.updateCatalog(catalogId, catalogDTO);
             String responseBody = JsonUtil.convertToJson(updatedCatalog);
+
+            LOGGER.info("Update catalog request completed successfully.");
             return ResponseUtil.createApiResponse(HttpStatusCode.OK, responseBody, ResponseUtil.createExpandedHeader());
         } catch (Exception e) {
             LOGGER.error("Failed to update catalog.", e);

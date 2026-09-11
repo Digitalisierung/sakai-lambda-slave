@@ -32,8 +32,9 @@ public interface CatalogRepository {
 
     /**
      *
+     * @param catalogId
      * @param catalog
      * @return Catalog
      */
-    Catalog updateCatalog(Catalog catalog);
+    Catalog updateCatalog(String catalogId, Catalog catalog);
 }

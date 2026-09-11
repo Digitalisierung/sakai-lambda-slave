@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.*;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.Iterator;
 import java.util.List;
@@ -30,30 +31,37 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
     }
 
     @Override
-    public Catalog updateCatalog(Catalog catalog) {
-        String catalogId = catalog.getPartitionKey();
-        catalog.setPartitionKey(ACCOUNT_ID + "#" + catalogId);
-        catalog.setSortKey(SORT_KEY + "#");
+    public Catalog updateCatalog(String catalogId, Catalog catalog) {
+        String partitionKey = ACCOUNT_ID + "#" + catalogId;
+        String sortKey = SORT_KEY + "#";
+
+        catalog.setPartitionKey(partitionKey);
+        catalog.setSortKey(sortKey);
+
+        LOGGER.debug("DynamoDb catalog update.");
+        LOGGER.debug("Update item: {}", catalog);
 
         UpdateItemEnhancedRequest<Catalog> request = UpdateItemEnhancedRequest.builder(Catalog.class)
                 .item(catalog)
                 .conditionExpression(Expression.builder()
-                        .expression("attribute_exists(partitionKey)")
+                        .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
                         .build())
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
                 .build();
 
         UpdateItemEnhancedResponse<Catalog> response = dynamoDbTable.updateItemWithResponse(request);
+        LOGGER.debug("Consumed capacity units: {}", response.consumedCapacity().capacityUnits());
 
         return response.attributes();
     }
 
     @Override
     public Optional<Catalog> findCatalogById(String id) {
-        LOGGER.debug("");
         Key key = Key.builder()
                 .partitionValue("ACC#default__CAT#" + id)
                 .sortValue(GSI_SORT_KEY + "#")
                 .build();
+        LOGGER.debug("Finding catalog by id '{}'", key.partitionKeyValue().s());
 
         Catalog catalog = dynamoDbTable.getItem(key);
         return Optional.ofNullable(catalog);

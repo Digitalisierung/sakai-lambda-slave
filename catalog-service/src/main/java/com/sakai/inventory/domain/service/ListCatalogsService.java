@@ -28,7 +28,7 @@ public class ListCatalogsService {
         this.catalogRepository = catalogRepository;
     }
 
-    // TODO: Anzahl von Artikeln im Katalog ermitteln (productCount).
+    // TODO: Anzahl von Artikeln im Katalog ermitteln (articleCount).
 
     /**
      *
