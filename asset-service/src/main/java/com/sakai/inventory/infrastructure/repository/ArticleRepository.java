@@ -36,4 +36,14 @@ public interface ArticleRepository {
      * @return PaginatedResult result with articles and next page token.
      */
     PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
+
+    /**
+     * Find articles in catalog with pagination support.
+     *
+     * @param id                Catalog ID.
+     * @param limit             Maximum number of articles to return.
+     * @param exclusiveStartKey DynamoDb pagination token (null for first page).
+     * @return PaginatedResult result with articles and next page token.
+     */
+    PaginatedResult<EnhancedDocument> findCatalogArticles(String id, int limit, Map<String, AttributeValue> exclusiveStartKey);
 }
