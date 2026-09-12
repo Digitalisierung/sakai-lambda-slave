@@ -15,7 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.EnhancedType;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable;
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
@@ -34,6 +36,14 @@ public class ListArticlesHandlerV2 implements RequestHandler<APIGatewayProxyRequ
     public ListArticlesHandlerV2() {
         super();
         LOGGER.info("ListArticlesHandlerV2");
+    }
+
+    private void testUpdate(String body) {
+        EnhancedDocument document = EnhancedDocument.fromJson(body);
+        if (document.isPresent("id")) {
+            String id = document.get("id", String.class);
+            String name = document.get("name", EnhancedType.of(String.class));
+        }
     }
 
     @Override
