@@ -363,6 +363,9 @@ Outputs:
   ListArticlesHandlerIamRole:
     Description: IAM Role created for ListArticlesHandler function.
     Value: !GetAtt ListArticlesHandlerServiceRole.Arn
+  ListCatalogsHandlerArn:
+    Description: ListCatalogsHandler Lambda Function ARN.
+    Value: !GetAtt ListCatalogsHandler.Arn
   DynamoDbTableName:
     Description: Name of DynamoDB table.
     Value: !Ref InventoryCatalogs
