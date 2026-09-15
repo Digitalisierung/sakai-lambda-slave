@@ -9,10 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class DynamoDbCatalogRepository implements CatalogRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbCatalogRepository.class);
@@ -60,7 +57,7 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
     public Optional<Catalog> findCatalogById(String id) {
         Key key = Key.builder()
                 .partitionValue("ACC#default__CAT#" + id)
-                .sortValue(GSI_SORT_KEY + "#")
+                .sortValue(SORT_KEY + "#")
                 .build();
         LOGGER.debug("Finding catalog by id '{}'", key.partitionKeyValue().s());
 
@@ -95,5 +92,26 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
 
         LOGGER.debug("No catalogs found.");
         return new PaginatedResult<>(List.of(), Map.of());
+    }
+
+    @Override
+    public String save(Catalog catalog) {
+        String catalogId = UUID.randomUUID().toString();
+        String partitionKey = ACCOUNT_ID + "#" + catalogId;
+        String sortKey = SORT_KEY + "#";
+
+        catalog.setPartitionKey(partitionKey);
+        catalog.setSortKey(sortKey);
+        LOGGER.debug("Saving catalog {}", catalog);
+
+        PutItemEnhancedRequest<Catalog> putItemRequest = PutItemEnhancedRequest.builder(Catalog.class)
+                .item(catalog)
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .build();
+
+        PutItemEnhancedResponse<Catalog> response = dynamoDbTable.putItemWithResponse(putItemRequest);
+        LOGGER.debug("Consumed capacity units {}", response.consumedCapacity().capacityUnits());
+
+        return catalogId;
     }
 }

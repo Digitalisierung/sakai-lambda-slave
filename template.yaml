@@ -156,6 +156,7 @@ Resources:
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
   ListCatalogArticlesHandlerServiceRole:
+  CreateCatalogHandlerServiceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -170,13 +171,15 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: DynamoDbAccessFive
+        - PolicyName: DynamoDbCreateCatalogAccess
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - dynamodb:Query
+                  - dynamodb:PutItem
+                  - dynamodb:DescribeTable
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
 
@@ -260,6 +263,18 @@ Resources:
           Properties:
             Path: /catalogs/{id}/articles
             Method: get
+  CreateCatalogHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: catalog-service/
+      Handler: com.sakai.inventory.api.handler.CreateCatalogHandler::handleRequest
+      Role: !GetAtt CreateCatalogHandlerServiceRole.Arn
+      Events:
+        CreateCatalogApi:
+          Type: Api
+          Properties:
+            Path: /catalogs
+            Method: post
             RestApiId: !Ref InventoryApi
 
   #########################################
