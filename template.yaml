@@ -156,6 +156,30 @@ Resources:
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
   ListCatalogArticlesHandlerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbListCatalogArtAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
   CreateCatalogHandlerServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -177,7 +201,6 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - dynamodb:Query
                   - dynamodb:PutItem
                   - dynamodb:DescribeTable
                 Resource:
@@ -263,6 +286,7 @@ Resources:
           Properties:
             Path: /catalogs/{id}/articles
             Method: get
+            RestApiId: !Ref InventoryApi
   CreateCatalogHandler:
     Type: AWS::Serverless::Function
     Properties:
