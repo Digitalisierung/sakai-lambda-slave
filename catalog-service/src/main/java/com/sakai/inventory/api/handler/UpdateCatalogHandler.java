@@ -34,6 +34,7 @@ public class UpdateCatalogHandler implements RequestHandler<APIGatewayProxyReque
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
         LOGGER.info("Update catalog request received.");
         LOGGER.debug("Update catalog request details: Requested path: '{}', RequestId: {}", requestEvent.getPath(), context.getAwsRequestId());
+
         Map<String, String> pathParam = requestEvent.getPathParameters();
         if (pathParam == null || !pathParam.containsKey("id")) {
             LOGGER.warn("Missing required path parameter: catalog ID");

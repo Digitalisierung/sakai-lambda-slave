@@ -31,10 +31,19 @@ public interface CatalogRepository {
     PaginatedResult<Catalog> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
     /**
+     * Update existing catalog.
      *
      * @param catalogId
      * @param catalog
      * @return Catalog
      */
     Catalog updateCatalog(String catalogId, Catalog catalog);
+
+    /**
+     * Save new catalog.
+     *
+     * @param catalog
+     * @return
+     */
+    String save(Catalog catalog);
 }
