@@ -22,7 +22,8 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
 
     private final DynamoDbTable<Catalog> dynamoDbTable;
 
-    public DynamoDbCatalogRepository(final DynamoDbEnhancedClient enhancedClient, final String tableName, TableSchema<Catalog> tableSchema) {
+    public DynamoDbCatalogRepository(final DynamoDbEnhancedClient enhancedClient, final String tableName, final TableSchema<Catalog> tableSchema) {
+        super();
         this.dynamoDbTable = enhancedClient.table(tableName, tableSchema);
         LOGGER.info("DynamoDbCatalogRepository initialized. Table name {}", tableName);
     }

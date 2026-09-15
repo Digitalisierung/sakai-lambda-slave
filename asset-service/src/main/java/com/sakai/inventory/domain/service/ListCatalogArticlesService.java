@@ -18,36 +18,39 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ListArticlesService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
+public class ListCatalogArticlesService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListCatalogArticlesService.class);
 
     private final ArticleRepository articleRepository;
 
-    public ListArticlesService(ArticleRepository articleRepository) {
+    public ListCatalogArticlesService(ArticleRepository articleRepository) {
         super();
         this.articleRepository = articleRepository;
     }
 
-    public PaginatedArticlesResponseDTO listArticlesPaginated(int pageSize, String nextToken) {
-        LOGGER.info("Listing articles...");
+    public PaginatedArticlesResponseDTO findArticlesInCatalog(final String catalogId, final String nextToken, final int pageSize) {
+        LOGGER.info("Finding articles in a catalog...");
 
-        Map<String, AttributeValue> exclusiveStartKey = decodeNextToken(nextToken);
+        Map<String, AttributeValue> exclusiveStartKey = this.decodeToken(nextToken);
+        PaginatedResult<EnhancedDocument> paginatedResult = this.articleRepository.findCatalogArticles(catalogId, pageSize, exclusiveStartKey);
 
-        PaginatedResult<EnhancedDocument> paginatedResult = articleRepository.findAll(pageSize, exclusiveStartKey);
+        String encodedNextToken = this.encodeToken(paginatedResult.lastEvaluatedKey());
 
         List<EnhancedDocument> items = paginatedResult.items();
+        String articles = "[]";
+        int totalReturned = 0;
 
-        String articles = items.stream()
-                .map(EnhancedDocument::toJson)
-                .collect(Collectors.joining(",", "[", "]"));
+        if (items != null) {
+            totalReturned = items.size();
+            articles = items.stream()
+                    .map(EnhancedDocument::toJson)
+                    .collect(Collectors.joining(",", "[", "]"));
+        }
 
-        String encodedNextToken = encodeNextToken(paginatedResult.lastEvaluatedKey());
-
-        LOGGER.info("Articles listed successfully. Returned {} items. hasMore='{}'.", items.size(), encodedNextToken != null);
+        LOGGER.info("Articles listed successfully. Returned {} items. hasMore='{}'.", totalReturned, encodedNextToken != null);
         LOGGER.debug("Returned articles payload: {}", articles);
 
-        return new PaginatedArticlesResponseDTO(articles, encodedNextToken, items.size(), encodedNextToken != null);
-
+        return new PaginatedArticlesResponseDTO(articles, encodedNextToken, totalReturned, encodedNextToken != null);
     }
 
     /**
@@ -56,7 +59,7 @@ public class ListArticlesService {
      * @param nextToken pointer to the last element of the previous page.
      * @return Map<> - start key for the next page.
      */
-    private Map<String, AttributeValue> decodeNextToken(String nextToken) {
+    private Map<String, AttributeValue> decodeToken(String nextToken) {
         if (nextToken == null || nextToken.isBlank()) {
             return null;
         }
@@ -68,16 +71,17 @@ public class ListArticlesService {
         try {
             Map<String, String> tokenMap = JsonUtil.parseFromJsonToObject(json, new TypeReference<>() {
             });
-
             Map<String, AttributeValue> startKey = new HashMap<>();
-            for (Map.Entry<String, String> entry : tokenMap.entrySet()) {
-                if (entry.getValue() != null) {
-                    startKey.put(entry.getKey(), AttributeValue.builder()
-                            .s(entry.getValue())
-                            .build());
+
+            for (Map.Entry<String, String> item : tokenMap.entrySet()) {
+                if (item.getValue() != null) {
+                    startKey.put(
+                            item.getKey(), AttributeValue.builder()
+                                    .s(item.getValue())
+                                    .build()
+                    );
                 }
             }
-
             return startKey;
         } catch (JsonProcessingException e) {
             LOGGER.error("Failed to decode nextToken.", e);
@@ -91,7 +95,7 @@ public class ListArticlesService {
      * @param lastEvaluatedKey - last evaluated key from previous page.
      * @return String - Base64 JSON string.
      */
-    private String encodeNextToken(Map<String, AttributeValue> lastEvaluatedKey) {
+    private String encodeToken(Map<String, AttributeValue> lastEvaluatedKey) {
         if (lastEvaluatedKey == null || lastEvaluatedKey.isEmpty()) {
             return null;
         }
@@ -109,6 +113,8 @@ public class ListArticlesService {
                 tokenMap.put(entry.getKey(), value.s());
             } else if (value.n() != null) {
                 tokenMap.put(entry.getKey(), value.n());
+            } else if (value.bool() != null) {
+                tokenMap.put(entry.getKey(), String.valueOf(value.bool()));
             }
         }
 

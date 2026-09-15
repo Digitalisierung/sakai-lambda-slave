@@ -13,6 +13,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.*;
 
@@ -86,6 +87,35 @@ public class DynamoDbArticleRepository implements ArticleRepository {
         LOGGER.debug("Found {} articles.", articles.size());
 
         return new PaginatedResult<>(articles, lastEvaluatedKey);
+    }
+
+    @Override
+    public PaginatedResult<EnhancedDocument> findCatalogArticles(final String id, final int limit, final Map<String, AttributeValue> exclusiveStartKey) {
+        LOGGER.debug("Paginated querying articles for catalog id '{}'. Limit {}, start key {}", id, limit, exclusiveStartKey != null);
+
+        Key key = Key.builder()
+                .partitionValue("ACC#default__CAT#" + id)
+                .sortValue("ITEM#")
+                .build();
+
+        QueryConditional query = QueryConditional.sortBeginsWith(key);
+
+        QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
+                .queryConditional(query)
+                .exclusiveStartKey(exclusiveStartKey)
+                .limit(limit)
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .build();
+
+        Iterator<Page<EnhancedDocument>> pageIterator = articleTable.query(queryRequest).iterator();
+
+        if (!pageIterator.hasNext()) {
+            return new PaginatedResult<>(Collections.emptyList(), null);
+        }
+
+        Page<EnhancedDocument> documentPage = pageIterator.next();
+
+        return new PaginatedResult<>(documentPage.items(), documentPage.lastEvaluatedKey());
     }
 
     private Key buildArticleKey(String id) {
