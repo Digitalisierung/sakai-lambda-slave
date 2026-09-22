@@ -1,7 +1,6 @@
 package com.sakai.inventory.infrastructure.repository;
 
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
-import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Map;
@@ -11,14 +10,14 @@ import java.util.Optional;
  * repository interface for Article domain objects.
  * Provides domain-oriented operations for article management.
  */
-public interface ArticleRepository {
+public interface ArticleRepository<T> {
     /**
      * Find article by its unique identifier.
      *
      * @param id equal partitionKey.
      * @return Optional<EnhancedDocument>
      */
-    Optional<EnhancedDocument> findById(String id);
+    Optional<T> findById(String id);
 
     /**
      * Find article by its unique identifier.
@@ -26,7 +25,7 @@ public interface ArticleRepository {
      * @param articleId equal UUID part of sortKey.
      * @return Optional<EnhancedDocument> of Articles.
      */
-    Optional<EnhancedDocument> findArticleById(String articleId);
+    Optional<T> findArticleById(String articleId);
 
     /**
      * Find all articles with pagination support. Uses Query.
@@ -35,7 +34,7 @@ public interface ArticleRepository {
      * @param exclusiveStartKey DynamoDb pagination token (null for first page).
      * @return PaginatedResult result with articles and next page token.
      */
-    PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
+    PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
     /**
      * Find articles in catalog with pagination support.
@@ -45,5 +44,5 @@ public interface ArticleRepository {
      * @param exclusiveStartKey DynamoDb pagination token (null for first page).
      * @return PaginatedResult result with articles and next page token.
      */
-    PaginatedResult<EnhancedDocument> findCatalogArticles(String id, int limit, Map<String, AttributeValue> exclusiveStartKey);
+    PaginatedResult<T> findCatalogArticles(String id, int limit, Map<String, AttributeValue> exclusiveStartKey);
 }

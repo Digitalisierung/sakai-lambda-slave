@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 public class ListArticlesService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListArticlesService.class);
 
-    private final ArticleRepository articleRepository;
+    private final ArticleRepository<EnhancedDocument> articleRepository;
 
-    public ListArticlesService(ArticleRepository articleRepository) {
+    public ListArticlesService(ArticleRepository<EnhancedDocument> articleRepository) {
         super();
         this.articleRepository = articleRepository;
     }

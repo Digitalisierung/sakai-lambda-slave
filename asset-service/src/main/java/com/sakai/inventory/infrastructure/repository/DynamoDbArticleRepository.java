@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.*;
 
-public class DynamoDbArticleRepository implements ArticleRepository {
+public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
     private final DynamoDbTable<EnhancedDocument> articleTable;

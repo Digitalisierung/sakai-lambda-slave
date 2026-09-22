@@ -6,9 +6,9 @@ import com.sakai.inventory.infrastructure.mapper.CatalogMapper;
 import com.sakai.inventory.infrastructure.repository.CatalogRepository;
 
 public class CreateCatalogService {
-    private final CatalogRepository catalogRepository;
+    private final CatalogRepository<Catalog> catalogRepository;
 
-    public CreateCatalogService(CatalogRepository catalogRepository) {
+    public CreateCatalogService(CatalogRepository<Catalog> catalogRepository) {
         super();
         this.catalogRepository = catalogRepository;
     }

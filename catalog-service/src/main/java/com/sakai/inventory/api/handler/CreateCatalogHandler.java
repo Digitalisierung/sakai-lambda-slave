@@ -60,7 +60,7 @@ public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyReque
         }
     }
 
-    private CatalogRepository createCatalogRepository() {
+    private CatalogRepository<Catalog> createCatalogRepository() {
         DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
         String tableName = DynamoDbFactory.getTableName();
         TableSchema<Catalog> tableSchema = DynamoDbFactory.createTableSchema();

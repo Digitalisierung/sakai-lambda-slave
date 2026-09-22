@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.*;
 
-public class DynamoDbCatalogRepository implements CatalogRepository {
+public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbCatalogRepository.class);
 
     private static final String GSI_ENTITY_TYPE = "GSI_entityType";

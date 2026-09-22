@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.api.dto.PaginatedCatalogsResponseDTO;
+import com.sakai.inventory.domain.model.Catalog;
 import com.sakai.inventory.domain.service.ListCatalogsService;
 import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.repository.CatalogRepository;
@@ -79,7 +80,7 @@ public class ListCatalogsHandler implements RequestHandler<APIGatewayProxyReques
         return queryStringParameters.get("nextToken");
     }
 
-    private CatalogRepository createCatalogRepository() {
+    private CatalogRepository<Catalog> createCatalogRepository() {
         DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
         String tableName = DynamoDbFactory.getTableName();
         return new DynamoDbCatalogRepository(enhancedClient, tableName, DynamoDbFactory.createTableSchema());

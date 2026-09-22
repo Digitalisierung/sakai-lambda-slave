@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
 public class UpdateCatalogService {
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateCatalogService.class);
 
-    private final CatalogRepository catalogRepository;
+    private final CatalogRepository<Catalog> catalogRepository;
 
-    public UpdateCatalogService(CatalogRepository catalogRepository) {
+    public UpdateCatalogService(CatalogRepository<Catalog> catalogRepository) {
         super();
         this.catalogRepository = catalogRepository;
     }

@@ -11,7 +11,7 @@ import java.util.Optional;
  * Repository interface for catalog domain objects.
  * Provides domain-oriented operations for catalog management.
  */
-public interface CatalogRepository {
+public interface CatalogRepository<T> {
 
     /**
      * Find catalog by its unique identifier.
@@ -19,7 +19,7 @@ public interface CatalogRepository {
      * @param id equal .
      * @return Optional<Catalog>
      */
-    Optional<Catalog> findCatalogById(String id);
+    Optional<T> findCatalogById(String id);
 
     /**
      * Find all catalogs with pagination support.
@@ -28,7 +28,7 @@ public interface CatalogRepository {
      * @param exclusiveStartKey DynamoDb pagination token (null for first page).
      * @return PaginatedResult result with catalogs and next page token.
      */
-    PaginatedResult<Catalog> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
+    PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
     /**
      * Update existing catalog.
@@ -37,7 +37,7 @@ public interface CatalogRepository {
      * @param catalog
      * @return Catalog
      */
-    Catalog updateCatalog(String catalogId, Catalog catalog);
+    T updateCatalog(String catalogId, Catalog catalog);
 
     /**
      * Save new catalog.

@@ -21,9 +21,9 @@ import java.util.Map;
 public class ListCatalogsService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ListCatalogsService.class);
 
-    private final CatalogRepository catalogRepository;
+    private final CatalogRepository<Catalog> catalogRepository;
 
-    public ListCatalogsService(final CatalogRepository catalogRepository) {
+    public ListCatalogsService(final CatalogRepository<Catalog> catalogRepository) {
         super();
         this.catalogRepository = catalogRepository;
     }

@@ -14,9 +14,9 @@ import java.util.Optional;
 public class GetArticleService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GetArticleService.class);
 
-    private final ArticleRepository articleRepository;
+    private final ArticleRepository<EnhancedDocument> articleRepository;
 
-    public GetArticleService(ArticleRepository articleRepository) {
+    public GetArticleService(ArticleRepository<EnhancedDocument> articleRepository) {
         super();
         this.articleRepository = articleRepository;
     }

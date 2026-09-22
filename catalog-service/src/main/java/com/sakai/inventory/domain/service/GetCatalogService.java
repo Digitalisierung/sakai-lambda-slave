@@ -12,9 +12,9 @@ import java.util.Optional;
 public class GetCatalogService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GetCatalogService.class);
 
-    private final CatalogRepository catalogRepository;
+    private final CatalogRepository<Catalog> catalogRepository;
 
-    public GetCatalogService(CatalogRepository catalogRepository) {
+    public GetCatalogService(CatalogRepository<Catalog> catalogRepository) {
         super();
         this.catalogRepository = catalogRepository;
     }
