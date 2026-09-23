@@ -7,25 +7,25 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * repository interface for Article domain objects.
+ * Repository interface for Article domain objects.
  * Provides domain-oriented operations for article management.
  */
 public interface ArticleRepository<T> {
     /**
-     * Find article by its unique identifier.
+     * Find an article by its unique identifier.
      *
      * @param id equal partitionKey.
-     * @return Optional<EnhancedDocument>
+     * @return Optional<T>
      */
     Optional<T> findById(String id);
 
     /**
-     * Find article by its unique identifier.
+     * Find an article by its unique identifier.
      *
      * @param articleId equal UUID part of sortKey.
      * @return Optional<EnhancedDocument> of Articles.
      */
-    Optional<T> findArticleById(String articleId);
+    Optional<T> findByIdViaGsi(String articleId);
 
     /**
      * Find all articles with pagination support. Uses Query.

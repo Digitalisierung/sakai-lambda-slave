@@ -22,6 +22,6 @@ public class GetArticleService {
     }
 
     public Optional<EnhancedDocument> findArticleById(String id) {
-        return articleRepository.findArticleById("ITEM#" + id);
+        return articleRepository.findByIdViaGsi(id);
     }
 }

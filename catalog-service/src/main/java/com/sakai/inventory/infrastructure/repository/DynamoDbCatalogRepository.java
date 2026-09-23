@@ -29,7 +29,7 @@ public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
     }
 
     @Override
-    public Catalog updateCatalog(String catalogId, Catalog catalog) {
+    public Catalog update(String catalogId, Catalog catalog) {
         String partitionKey = ACCOUNT_ID + "#" + catalogId;
         String sortKey = SORT_KEY + "#";
 
@@ -54,7 +54,7 @@ public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
     }
 
     @Override
-    public Optional<Catalog> findCatalogById(String id) {
+    public Optional<Catalog> findById(String id) {
         Key key = Key.builder()
                 .partitionValue("ACC#default__CAT#" + id)
                 .sortValue(SORT_KEY + "#")

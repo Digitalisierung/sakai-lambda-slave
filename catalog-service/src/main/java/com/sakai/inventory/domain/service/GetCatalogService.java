@@ -20,7 +20,7 @@ public class GetCatalogService {
     }
 
     public Optional<CatalogDTO> findCatalogById(String id) {
-        Optional<Catalog> catalogOptional = catalogRepository.findCatalogById(id);
+        Optional<Catalog> catalogOptional = catalogRepository.findById(id);
 
         return catalogOptional.map(CatalogMapper.MAPPER::toDTO);
     }

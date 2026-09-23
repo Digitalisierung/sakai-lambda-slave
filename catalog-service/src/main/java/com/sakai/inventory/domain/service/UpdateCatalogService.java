@@ -20,7 +20,7 @@ public class UpdateCatalogService {
     public CatalogDTO updateCatalog(String catalogId, CatalogDTO catalogDTO) {
         LOGGER.info("Updating catalog with id '{}'", catalogId);
         Catalog catalog = CatalogMapper.MAPPER.toCatalogEntity(catalogDTO);
-        Catalog updatedCatalog = this.catalogRepository.updateCatalog(catalogId, catalog);
+        Catalog updatedCatalog = this.catalogRepository.update(catalogId, catalog);
         return CatalogMapper.MAPPER.toDTO(updatedCatalog);
     }
 }

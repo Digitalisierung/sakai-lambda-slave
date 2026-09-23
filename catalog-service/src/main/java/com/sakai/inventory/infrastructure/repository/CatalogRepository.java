@@ -1,6 +1,5 @@
 package com.sakai.inventory.infrastructure.repository;
 
-import com.sakai.inventory.domain.model.Catalog;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -17,9 +16,9 @@ public interface CatalogRepository<T> {
      * Find catalog by its unique identifier.
      *
      * @param id equal .
-     * @return Optional<Catalog>
+     * @return Optional<T>
      */
-    Optional<T> findCatalogById(String id);
+    Optional<T> findById(String id);
 
     /**
      * Find all catalogs with pagination support.
@@ -33,17 +32,17 @@ public interface CatalogRepository<T> {
     /**
      * Update existing catalog.
      *
-     * @param catalogId
-     * @param catalog
+     * @param id
+     * @param t
      * @return Catalog
      */
-    T updateCatalog(String catalogId, Catalog catalog);
+    T update(String id, T t);
 
     /**
      * Save new catalog.
      *
-     * @param catalog
+     * @param t
      * @return
      */
-    String save(Catalog catalog);
+    String save(T t);
 }
