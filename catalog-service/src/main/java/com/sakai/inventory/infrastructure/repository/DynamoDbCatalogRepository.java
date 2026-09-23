@@ -95,23 +95,28 @@ public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
     }
 
     @Override
-    public String save(Catalog catalog) {
+    public Catalog save(Catalog catalog) {
         String catalogId = UUID.randomUUID().toString();
         String partitionKey = ACCOUNT_ID + "#" + catalogId;
         String sortKey = SORT_KEY + "#";
 
         catalog.setPartitionKey(partitionKey);
         catalog.setSortKey(sortKey);
-        LOGGER.debug("Saving catalog {}", catalog);
+
+        Expression conditionExpression = Expression.builder()
+                .expression("attribute_not_exists(partitionKey) AND attribute_not_exists(sortKey)")
+                .build();
 
         PutItemEnhancedRequest<Catalog> putItemRequest = PutItemEnhancedRequest.builder(Catalog.class)
                 .item(catalog)
                 .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .conditionExpression(conditionExpression)
                 .build();
 
         PutItemEnhancedResponse<Catalog> response = dynamoDbTable.putItemWithResponse(putItemRequest);
+        LOGGER.debug("Saving catalog {}", catalog);
         LOGGER.debug("Consumed capacity units {}", response.consumedCapacity().capacityUnits());
 
-        return catalogId;
+        return catalog;
     }
 }

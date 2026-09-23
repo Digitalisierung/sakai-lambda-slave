@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface CatalogRepository<T> {
 
     /**
-     * Find catalog by its unique identifier.
+     * Find a catalog by its unique identifier.
      *
      * @param id equal .
      * @return Optional<T>
@@ -30,19 +30,19 @@ public interface CatalogRepository<T> {
     PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
     /**
-     * Update existing catalog.
+     * Update an existing item.
      *
-     * @param id
+     * @param id unique item identifier.
      * @param t
-     * @return Catalog
+     * @return T updated item.
      */
     T update(String id, T t);
 
     /**
-     * Save new catalog.
+     * Save / create new item.
      *
-     * @param t
-     * @return
+     * @param t item to save.
+     * @return String id of saved item.
      */
-    String save(T t);
+    T save(T t);
 }
