@@ -16,13 +16,14 @@ public interface CatalogMapper {
     CatalogMapper MAPPER = Mappers.getMapper(CatalogMapper.class);
 
     @Mapping(target = "id", source = "partitionKey", qualifiedByName = "extractIdFromPartitionKey")
-    @Mapping(target = "articleCount", constant = "0")
+    @Mapping(target = "createdAt", expression = "java(formatInstant(entity.getCreatedAt()))")
     @Mapping(target = "updatedAt", expression = "java(formatInstant(entity.getUpdatedAt()))")
     CatalogDTO toDTO(Catalog entity);
 
     @Mapping(target = "partitionKey", source = "id")
     @Mapping(target = "sortKey", ignore = true)
     @Mapping(target = "entityType", ignore = true)
+    @Mapping(target = "rendered", ignore = true)
     @Mapping(target = "createdAt", expression = "java(parseInstant(dto.createdAt()))")
     @Mapping(target = "updatedAt", expression = "java(parseInstant(dto.updatedAt()))")
     Catalog toCatalogEntity(CatalogDTO dto);
