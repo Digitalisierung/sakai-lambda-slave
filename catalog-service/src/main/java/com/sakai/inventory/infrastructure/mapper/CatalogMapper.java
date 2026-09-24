@@ -22,8 +22,8 @@ public interface CatalogMapper {
 
     @Mapping(target = "partitionKey", source = "id")
     @Mapping(target = "sortKey", ignore = true)
-    @Mapping(target = "rendered", ignore = true)
-    @Mapping(target = "entityType", constant = "INDEX")
+    @Mapping(target = "entityType", ignore = true)
+    @Mapping(target = "createdAt", expression = "java(parseInstant(dto.createdAt()))")
     @Mapping(target = "updatedAt", expression = "java(parseInstant(dto.updatedAt()))")
     Catalog toCatalogEntity(CatalogDTO dto);
 

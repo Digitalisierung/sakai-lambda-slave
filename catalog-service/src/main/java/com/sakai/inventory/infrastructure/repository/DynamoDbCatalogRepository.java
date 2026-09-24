@@ -102,6 +102,7 @@ public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
 
         catalog.setPartitionKey(partitionKey);
         catalog.setSortKey(sortKey);
+        catalog.setEntityType(GSI_PARTITION_KEY);
 
         Expression conditionExpression = Expression.builder()
                 .expression("attribute_not_exists(partitionKey) AND attribute_not_exists(sortKey)")
@@ -113,9 +114,10 @@ public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
                 .conditionExpression(conditionExpression)
                 .build();
 
+        LOGGER.debug("Saving {}", catalog);
         PutItemEnhancedResponse<Catalog> response = dynamoDbTable.putItemWithResponse(putItemRequest);
-        LOGGER.debug("Saving catalog {}", catalog);
-        LOGGER.debug("Consumed capacity units {}", response.consumedCapacity().capacityUnits());
+        LOGGER.info("Saved successfully.");
+        LOGGER.info("Consumed capacity units {}", response.consumedCapacity().capacityUnits());
 
         return catalog;
     }

@@ -24,6 +24,8 @@ public class CreateCatalogService {
 
     public CatalogDTO saveCatalog(CatalogDTO catalogDTO) {
         Catalog catalog = CatalogMapper.MAPPER.toCatalogEntity(catalogDTO);
+        catalog.setRendered(true);
+        catalog.setArticleCount(0); // erst neue erstellter Katalog hat 0 Artikel.
 
         Set<ConstraintViolation<Catalog>> violations = VALIDATOR.validate(catalog);
 

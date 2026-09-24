@@ -12,7 +12,6 @@ import java.time.Instant;
 public class Catalog {
     private String partitionKey;
     private String sortKey;
-    @NotBlank(message = "Entity type must not be blank")
     private String entityType;
     private Instant updatedAt;
     @NotNull(message = "Created at must not be null")
@@ -21,6 +20,7 @@ public class Catalog {
     @NotBlank(message = "Catalog name must not be blank")
     private String name;
     private String color;
+    private Integer articleCount;
     private Boolean rendered = true;
 
     public Catalog() {
@@ -100,6 +100,14 @@ public class Catalog {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public Integer getArticleCount() {
+        return articleCount;
+    }
+
+    public void setArticleCount(Integer articleCount) {
+        this.articleCount = articleCount;
     }
 
     public Boolean getRendered() {
