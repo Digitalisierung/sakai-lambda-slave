@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.*;
 
-public class DynamoDbArticleRepository implements ArticleRepository {
+public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
     private final DynamoDbTable<EnhancedDocument> articleTable;
@@ -33,15 +33,16 @@ public class DynamoDbArticleRepository implements ArticleRepository {
 
         Key key = buildArticleKey(id);
 
-        EnhancedDocument document = articleTable.getItem(key);
+        EnhancedDocument rohDocument = articleTable.getItem(key);
+        EnhancedDocument document = replaceIdInDocument(rohDocument);
 
         return Optional.ofNullable(document);
     }
 
     @Override
-    public Optional<EnhancedDocument> findArticleById(String articleId) {
-        LOGGER.debug("Querying single article by id='{}' using GSI_entityType.", articleId);
-        QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKey(articleId));
+    public Optional<EnhancedDocument> findByIdViaGsi(String id) {
+        LOGGER.debug("Querying single article by id='{}' using GSI_entityType.", id);
+        QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKey(id));
 
         QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
                 .queryConditional(queryConditional)
@@ -52,6 +53,7 @@ public class DynamoDbArticleRepository implements ArticleRepository {
 
         return sdkIterable.stream()
                 .flatMap(page -> page.items().stream())
+                .map(this::replaceIdInDocument)
                 .findFirst();
     }
 
@@ -84,9 +86,13 @@ public class DynamoDbArticleRepository implements ArticleRepository {
             }
         });
 
-        LOGGER.debug("Found {} articles.", articles.size());
+        List<EnhancedDocument> replacedList = articles.stream()
+                .map(this::replaceIdInDocument)
+                .toList();
 
-        return new PaginatedResult<>(articles, lastEvaluatedKey);
+        LOGGER.debug("Found {} articles.", replacedList.size());
+
+        return new PaginatedResult<>(replacedList, lastEvaluatedKey);
     }
 
     @Override
@@ -115,7 +121,11 @@ public class DynamoDbArticleRepository implements ArticleRepository {
 
         Page<EnhancedDocument> documentPage = pageIterator.next();
 
-        return new PaginatedResult<>(documentPage.items(), documentPage.lastEvaluatedKey());
+        List<EnhancedDocument> articles = documentPage.items().stream()
+                .map(this::replaceIdInDocument)
+                .toList();
+
+        return new PaginatedResult<>(articles, documentPage.lastEvaluatedKey());
     }
 
     private Key buildArticleKey(String id) {
@@ -123,9 +133,11 @@ public class DynamoDbArticleRepository implements ArticleRepository {
             throw new IllegalArgumentException("Article id must not be null or empty.");
         }
 
+        String sortKey = "ITEM#" + id;
+
         return Key.builder()
                 .partitionValue("ARTICLES")
-                .sortValue(id)
+                .sortValue(sortKey)
                 .build();
     }
 
@@ -133,5 +145,46 @@ public class DynamoDbArticleRepository implements ArticleRepository {
         return Key.builder()
                 .partitionValue("ARTICLES")
                 .build();
+    }
+
+    private EnhancedDocument replaceIdInDocument(EnhancedDocument document) {
+        String partitionKey = document.getString("partitionKey");
+        String pk = extractIdFromPartitionKey(partitionKey);
+
+        String sortKey = document.getString("sortKey");
+        String sk = extractIdFromSortKey(sortKey);
+
+        Map<String, AttributeValue> map = document.toMap();
+        map.replace("partitionKey", AttributeValue.builder().s(pk).build());
+        map.replace("sortKey", AttributeValue.builder().s(sk).build());
+
+        return EnhancedDocument.fromAttributeValueMap(map);
+    }
+
+
+    private String extractIdFromPartitionKey(String partitionKey) {
+        if (partitionKey == null || partitionKey.isBlank()) {
+            return null;
+        }
+
+        String[] split = partitionKey.split("__");
+        if (split.length < 2) {
+            return null;
+        }
+
+        return extractIdFromSortKey(split[1]);
+    }
+
+    private String extractIdFromSortKey(String sortKey) {
+        if (sortKey == null || sortKey.isBlank()) {
+            return null;
+        }
+
+        String[] split = sortKey.split("#");
+        if (split.length < 2) {
+            return null;
+        }
+
+        return split[1];
     }
 }

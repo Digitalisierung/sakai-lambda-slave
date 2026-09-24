@@ -25,7 +25,7 @@ import java.util.Map;
 public class GetCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOGGER = LoggerFactory.getLogger(GetCatalogHandler.class);
 
-    private GetCatalogService catalogService;
+    private final GetCatalogService catalogService;
 
     public GetCatalogHandler() {
         super();
@@ -74,7 +74,7 @@ public class GetCatalogHandler implements RequestHandler<APIGatewayProxyRequestE
         }
     }
 
-    private CatalogRepository createCatalogRepository() {
+    private CatalogRepository<Catalog> createCatalogRepository() {
         DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
         String tableName = DynamoDbFactory.getTableName();
         return new DynamoDbCatalogRepository(enhancedClient, tableName, TableSchema.fromBean(Catalog.class));

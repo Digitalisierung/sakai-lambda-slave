@@ -87,7 +87,7 @@ public class ListCatalogArticlesHandler implements RequestHandler<APIGatewayProx
         return queryStringParameters.get("nextToken");
     }
 
-    private ArticleRepository createArticleRepository() {
+    private ArticleRepository<EnhancedDocument> createArticleRepository() {
         DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
         String tableName = DynamoDbFactory.getTableName();
         TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();

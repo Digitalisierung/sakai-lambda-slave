@@ -21,6 +21,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.http.HttpStatusCode;
 
+import java.util.Map;
+
 public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateCatalogHandler.class);
 
@@ -43,24 +45,33 @@ public class CreateCatalogHandler implements RequestHandler<APIGatewayProxyReque
             LOGGER.warn("Create catalog request received without a body.");
             return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Missing request body.");
         }
-        String body = requestEvent.getBody();
+        String requestBody = requestEvent.getBody();
 
         try {
-            CatalogDTO catalogDTO = JsonUtil.parseFromJsonToObject(body, new TypeReference<>() {
+            CatalogDTO newCatalog = JsonUtil.parseFromJsonToObject(requestBody, new TypeReference<>() {
             });
-            String catalogId = createCatalogService.saveCatalog(catalogDTO);
-            // Optional<CatalogDTO> opt = getCatalogService.findCatalogById(catalogId);
-            // String newBody = JsonUtil.convertToJson(savedCatalog);
+            CatalogDTO savedCatalog = createCatalogService.saveCatalog(newCatalog);
+
+            String responseBody = JsonUtil.convertToJson(savedCatalog);
+
+            String host = requestEvent.getHeaders().get("Host");
+            String stage = requestEvent.getRequestContext().getStage();
+            String path = requestEvent.getPath();
+            String catalogId = savedCatalog.id();
+            String location = String.format("https://%s/%s%s/%s", host, stage, path, catalogId);
+
+            Map<String, String> responseHeader = ResponseUtil.createExpandedHeader();
+            responseHeader.put("Location", location);
 
             LOGGER.info("Create new catalog request completed successfully.");
-            return ResponseUtil.createApiResponse(HttpStatusCode.CREATED, "{\"id\": \"" + catalogId + "\"}", ResponseUtil.createExpandedHeader());
+            return ResponseUtil.createApiResponse(HttpStatusCode.CREATED, responseBody, responseHeader);
         } catch (Exception e) {
             LOGGER.error("Error during catalog creation.", e);
             return ExceptionHandler.handleException(e);
         }
     }
 
-    private CatalogRepository createCatalogRepository() {
+    private CatalogRepository<Catalog> createCatalogRepository() {
         DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
         String tableName = DynamoDbFactory.getTableName();
         TableSchema<Catalog> tableSchema = DynamoDbFactory.createTableSchema();

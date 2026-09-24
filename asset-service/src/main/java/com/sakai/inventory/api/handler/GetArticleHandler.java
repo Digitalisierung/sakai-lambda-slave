@@ -70,7 +70,7 @@ public class GetArticleHandler implements RequestHandler<APIGatewayProxyRequestE
         }
     }
 
-    private ArticleRepository createArticleRepository() {
+    private ArticleRepository<EnhancedDocument> createArticleRepository() {
         DynamoDbEnhancedClient enhancedClient = DynamoDbFactory.createEnhancedClient();
         TableSchema<EnhancedDocument> tableSchema = DynamoDbFactory.createTableSchema();
         String tableName = DynamoDbFactory.getTableName();

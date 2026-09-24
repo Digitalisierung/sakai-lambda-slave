@@ -2,6 +2,7 @@ package com.sakai.inventory.shared.exception;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sakai.inventory.shared.util.ResponseUtil;
+import jakarta.validation.ConstraintViolationException;
 import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
@@ -25,6 +26,8 @@ public class ExceptionHandler {
                     ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessingException.getMessage());
             case ConditionalCheckFailedException conditionalCheckFailedException ->
                     ResponseUtil.createErrorResponse(HttpStatusCode.NOT_FOUND, conditionalCheckFailedException.getMessage());
+            case ConstraintViolationException constraintViolationException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, e.getMessage());
             default -> ResponseUtil.createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR, e.getMessage());
         };
     }

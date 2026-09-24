@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.*;
 
-public class DynamoDbCatalogRepository implements CatalogRepository {
+public class DynamoDbCatalogRepository implements CatalogRepository<Catalog> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbCatalogRepository.class);
 
     private static final String GSI_ENTITY_TYPE = "GSI_entityType";
@@ -29,34 +29,9 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
     }
 
     @Override
-    public Catalog updateCatalog(String catalogId, Catalog catalog) {
-        String partitionKey = ACCOUNT_ID + "#" + catalogId;
-        String sortKey = SORT_KEY + "#";
-
-        catalog.setPartitionKey(partitionKey);
-        catalog.setSortKey(sortKey);
-
-        LOGGER.debug("DynamoDb catalog update.");
-        LOGGER.debug("Update item: {}", catalog);
-
-        UpdateItemEnhancedRequest<Catalog> request = UpdateItemEnhancedRequest.builder(Catalog.class)
-                .item(catalog)
-                .conditionExpression(Expression.builder()
-                        .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
-                        .build())
-                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
-                .build();
-
-        UpdateItemEnhancedResponse<Catalog> response = dynamoDbTable.updateItemWithResponse(request);
-        LOGGER.debug("Consumed capacity units: {}", response.consumedCapacity().capacityUnits());
-
-        return response.attributes();
-    }
-
-    @Override
-    public Optional<Catalog> findCatalogById(String id) {
+    public Optional<Catalog> findById(String id) {
         Key key = Key.builder()
-                .partitionValue("ACC#default__CAT#" + id)
+                .partitionValue(ACCOUNT_ID + "#" + id)
                 .sortValue(SORT_KEY + "#")
                 .build();
         LOGGER.debug("Finding catalog by id '{}'", key.partitionKeyValue().s());
@@ -95,23 +70,56 @@ public class DynamoDbCatalogRepository implements CatalogRepository {
     }
 
     @Override
-    public String save(Catalog catalog) {
+    public Catalog update(String catalogId, Catalog catalog) {
+        String partitionKey = ACCOUNT_ID + "#" + catalogId;
+        String sortKey = SORT_KEY + "#";
+
+        catalog.setPartitionKey(partitionKey);
+        catalog.setSortKey(sortKey);
+        catalog.setEntityType(GSI_PARTITION_KEY);
+
+        LOGGER.debug("DynamoDb catalog update.");
+        LOGGER.debug("Update item: {}", catalog);
+
+        UpdateItemEnhancedRequest<Catalog> request = UpdateItemEnhancedRequest.builder(Catalog.class)
+                .item(catalog)
+                .conditionExpression(Expression.builder()
+                        .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
+                        .build())
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .build();
+
+        UpdateItemEnhancedResponse<Catalog> response = dynamoDbTable.updateItemWithResponse(request);
+        LOGGER.debug("Consumed capacity units: {}", response.consumedCapacity().capacityUnits());
+
+        return response.attributes();
+    }
+
+    @Override
+    public Catalog save(Catalog catalog) {
         String catalogId = UUID.randomUUID().toString();
         String partitionKey = ACCOUNT_ID + "#" + catalogId;
         String sortKey = SORT_KEY + "#";
 
         catalog.setPartitionKey(partitionKey);
         catalog.setSortKey(sortKey);
-        LOGGER.debug("Saving catalog {}", catalog);
+        catalog.setEntityType(GSI_PARTITION_KEY);
+
+        Expression conditionExpression = Expression.builder()
+                .expression("attribute_not_exists(partitionKey) AND attribute_not_exists(sortKey)")
+                .build();
 
         PutItemEnhancedRequest<Catalog> putItemRequest = PutItemEnhancedRequest.builder(Catalog.class)
                 .item(catalog)
                 .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .conditionExpression(conditionExpression)
                 .build();
 
+        LOGGER.debug("Saving {}", catalog);
         PutItemEnhancedResponse<Catalog> response = dynamoDbTable.putItemWithResponse(putItemRequest);
-        LOGGER.debug("Consumed capacity units {}", response.consumedCapacity().capacityUnits());
+        LOGGER.info("Saved successfully.");
+        LOGGER.info("Consumed capacity units {}", response.consumedCapacity().capacityUnits());
 
-        return catalogId;
+        return catalog;
     }
 }

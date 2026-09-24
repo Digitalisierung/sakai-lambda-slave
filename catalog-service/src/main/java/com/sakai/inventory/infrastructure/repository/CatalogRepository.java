@@ -1,6 +1,5 @@
 package com.sakai.inventory.infrastructure.repository;
 
-import com.sakai.inventory.domain.model.Catalog;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -11,15 +10,15 @@ import java.util.Optional;
  * Repository interface for catalog domain objects.
  * Provides domain-oriented operations for catalog management.
  */
-public interface CatalogRepository {
+public interface CatalogRepository<T> {
 
     /**
-     * Find catalog by its unique identifier.
+     * Find a catalog by its unique identifier.
      *
      * @param id equal .
-     * @return Optional<Catalog>
+     * @return Optional<T>
      */
-    Optional<Catalog> findCatalogById(String id);
+    Optional<T> findById(String id);
 
     /**
      * Find all catalogs with pagination support.
@@ -28,22 +27,22 @@ public interface CatalogRepository {
      * @param exclusiveStartKey DynamoDb pagination token (null for first page).
      * @return PaginatedResult result with catalogs and next page token.
      */
-    PaginatedResult<Catalog> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
+    PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
     /**
-     * Update existing catalog.
+     * Update an existing item.
      *
-     * @param catalogId
-     * @param catalog
-     * @return Catalog
+     * @param id unique item identifier.
+     * @param t
+     * @return T updated item.
      */
-    Catalog updateCatalog(String catalogId, Catalog catalog);
+    T update(String id, T t);
 
     /**
-     * Save new catalog.
+     * Save / create new item.
      *
-     * @param catalog
-     * @return
+     * @param t item to save.
+     * @return String id of saved item.
      */
-    String save(Catalog catalog);
+    T save(T t);
 }
