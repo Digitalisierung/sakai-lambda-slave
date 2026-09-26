@@ -9,9 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
-import software.amazon.awssdk.enhanced.dynamodb.model.Page;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
@@ -27,6 +25,28 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         this.enhancedClient = enhancedClient;
         this.articleTable = enhancedClient.table(tableName, tableSchema);
         LOGGER.info("DynamoDbArticleRepository initialized, table {}", tableName);
+    }
+
+    @Override
+    public List<EnhancedDocument> batchSave(List<EnhancedDocument> documents) {
+        LOGGER.debug("Batch saving {} documents.", documents.size());
+
+        WriteBatch.Builder<EnhancedDocument> writeBatchBuilder = WriteBatch.builder(EnhancedDocument.class)
+                .mappedTableResource(articleTable);
+
+        for (EnhancedDocument doc : documents) {
+            writeBatchBuilder.addPutItem(doc);
+        }
+
+        BatchWriteItemEnhancedRequest batchRequest = BatchWriteItemEnhancedRequest.builder()
+                .writeBatches(writeBatchBuilder.build())
+                .build();
+
+        var result = enhancedClient.batchWriteItem(batchRequest);
+
+        List<EnhancedDocument> unprocessed = result.unprocessedPutItemsForTable(articleTable);
+        LOGGER.debug("Batch save completed. Unprocessed items: {}", unprocessed.size());
+        return unprocessed;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.sakai.inventory.infrastructure.repository;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -11,6 +12,14 @@ import java.util.Optional;
  * Provides domain-oriented operations for article management.
  */
 public interface ArticleRepository<T> {
+    /**
+     * Save a batch of articles to DynamoDB using batchWriteItem.
+     *
+     * @param documents list of EnhancedDocuments to save (max 25).
+     * @return list of documents that failed to write (unprocessed items).
+     */
+    List<T> batchSave(List<T> documents);
+
     /**
      * Find an article by its unique identifier.
      *

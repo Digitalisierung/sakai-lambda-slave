@@ -57,6 +57,29 @@ Resources:
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
                   - !Sub '${InventoryCatalogs.Arn}/index/*'
+  CreateArticlesHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbBatchWrite
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
   GetArticleHandlerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -85,6 +108,19 @@ Resources:
   #########################################
   # Handlers
   #########################################
+  CreateArticlesHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.sakai.inventory.api.handler.CreateNewArticleHandler::handleRequest
+      Role: !GetAtt CreateArticlesHandlerRole.Arn
+      Events:
+        CreateArticlesApi:
+          Type: Api
+          Properties:
+            Path: /articles
+            Method: post
+            RestApiId: !Ref InventoryApi
   GetArticleHandler:
     Type: AWS::Serverless::Function
     Properties:
