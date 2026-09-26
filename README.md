@@ -1,3 +1,9 @@
+### update function
+
+```terminaloutput
+aws lambda update-function-code --function-name Dev-ApplicationStage-Saka-CreateCatalogFunctionId5-1yBGKfMbpjnj --zip-file fileb:///mnt/storage/Workspaces/IdeaProjects/sakai-lambda-slave/catalog-service/target/catalog-service-lambda.jar --profile sakai-dev
+```
+
 catalog-service angelegt (24.08.2026)
 
 Template-Validierung mit `sam validate`

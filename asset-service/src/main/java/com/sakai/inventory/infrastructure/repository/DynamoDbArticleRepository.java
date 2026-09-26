@@ -20,9 +20,11 @@ import java.util.*;
 public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
+    private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<EnhancedDocument> articleTable;
 
     public DynamoDbArticleRepository(final DynamoDbEnhancedClient enhancedClient, final String tableName, TableSchema<EnhancedDocument> tableSchema) {
+        this.enhancedClient = enhancedClient;
         this.articleTable = enhancedClient.table(tableName, tableSchema);
         LOGGER.info("DynamoDbArticleRepository initialized, table {}", tableName);
     }
