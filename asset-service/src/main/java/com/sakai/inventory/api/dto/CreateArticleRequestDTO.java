@@ -9,6 +9,7 @@ public record CreateArticleRequestDTO(
         String description,
         Integer stock,
         String imageUrl,
+        Boolean active,
         Boolean isFeatured,
         String catalogId,
         String createdAt

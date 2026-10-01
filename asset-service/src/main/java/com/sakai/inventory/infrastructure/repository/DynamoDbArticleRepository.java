@@ -27,14 +27,22 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         LOGGER.info("DynamoDbArticleRepository initialized, table {}", tableName);
     }
 
+    /**
+     * Saves a list of EnhancedDocuments in a batch.
+     *
+     * @param documents list of EnhancedDocuments to save (max 25).
+     * @return List<EnhancedDocument> List of unprocessed EnhancedDocuments (empty if all succeeded).
+     */
     @Override
     public List<EnhancedDocument> batchSave(List<EnhancedDocument> documents) {
         LOGGER.debug("Batch saving {} documents.", documents.size());
 
+        List<EnhancedDocument> supplementedDocuments = supplementDocumentsWithId(documents);
+
         WriteBatch.Builder<EnhancedDocument> writeBatchBuilder = WriteBatch.builder(EnhancedDocument.class)
                 .mappedTableResource(articleTable);
 
-        for (EnhancedDocument doc : documents) {
+        for (EnhancedDocument doc : supplementedDocuments) {
             writeBatchBuilder.addPutItem(doc);
         }
 
@@ -45,7 +53,17 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         var result = enhancedClient.batchWriteItem(batchRequest);
 
         List<EnhancedDocument> unprocessed = result.unprocessedPutItemsForTable(articleTable);
-        LOGGER.debug("Batch save completed. Unprocessed items: {}", unprocessed.size());
+        LOGGER.info("Batch save completed. Unprocessed items: {}", unprocessed.size());
+
+        // Gesamtkosten anzeigen, wenn mindestens einer geschrieben war.
+        if (unprocessed.size() != documents.size()) {
+            double wcu = 0.;
+            for (var cc : result.consumedCapacity()) {
+                wcu += cc.capacityUnits();
+            }
+            LOGGER.info("Write Capacity Units total: {}", wcu);
+        }
+
         return unprocessed;
     }
 
@@ -208,5 +226,37 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         }
 
         return split[1];
+    }
+
+    /**
+     * Adds partitionKey, sortKey and entityType to each document in the list.
+     *
+     * @param documents list of documents without partition- and sortKey
+     * @return List<EnhancedDocument> list of documents with partition- and sortKey plus entityType
+     */
+    private List<EnhancedDocument> supplementDocumentsWithId(List<EnhancedDocument> documents) {
+        List<EnhancedDocument> healthyList = new ArrayList<>();
+
+        for (EnhancedDocument doc : documents) {
+            String uuid = UUID.randomUUID().toString();
+            String catalogId = extractCatalogId(doc.getString("catalogId"));
+
+            String partitionKey = "ACC#default__CAT#" + catalogId;
+            String sortKey = "ITEM#" + uuid;
+
+            Map<String, AttributeValue> map = doc.toMap();
+            map.put("partitionKey", AttributeValue.builder().s(partitionKey).build());
+            map.put("sortKey", AttributeValue.builder().s(sortKey).build());
+            map.put("entityType", AttributeValue.builder().s("ARTICLES").build());
+
+            EnhancedDocument healthyDoc = EnhancedDocument.fromAttributeValueMap(map);
+            healthyList.add(healthyDoc);
+        }
+
+        return healthyList;
+    }
+
+    private String extractCatalogId(String catalogId) {
+        return (catalogId != null && !catalogId.isBlank()) ? catalogId : "default";
     }
 }
