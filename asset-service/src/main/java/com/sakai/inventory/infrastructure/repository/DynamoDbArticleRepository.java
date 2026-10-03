@@ -24,7 +24,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     public DynamoDbArticleRepository(final DynamoDbEnhancedClient enhancedClient, final String tableName, TableSchema<EnhancedDocument> tableSchema) {
         this.enhancedClient = enhancedClient;
         this.articleTable = enhancedClient.table(tableName, tableSchema);
-        LOGGER.info("DynamoDbArticleRepository initialized, table {}", tableName);
+        LOGGER.debug("DynamoDbArticleRepository initialized. Table name {}", tableName);
     }
 
     /**
@@ -35,7 +35,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
      */
     @Override
     public List<EnhancedDocument> batchSave(List<EnhancedDocument> documents) {
-        LOGGER.debug("Batch saving {} documents.", documents.size());
+        LOGGER.info("Batch saving {} documents.", documents.size());
 
         List<EnhancedDocument> supplementedDocuments = supplementDocumentsWithId(documents);
 
@@ -53,7 +53,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         var result = enhancedClient.batchWriteItem(batchRequest);
 
         List<EnhancedDocument> unprocessed = result.unprocessedPutItemsForTable(articleTable);
-        LOGGER.info("Batch save completed. Unprocessed items: {}", unprocessed.size());
+        LOGGER.info("Unprocessed items: {}", unprocessed.size());
 
         // Gesamtkosten anzeigen, wenn mindestens einer geschrieben war.
         if (unprocessed.size() != documents.size()) {

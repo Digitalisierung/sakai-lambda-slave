@@ -3,7 +3,6 @@ package com.sakai.inventory.domain.service;
 import com.sakai.inventory.api.dto.BatchCreateResponseDTO;
 import com.sakai.inventory.api.dto.BatchCreateResponseDTO.FailedEntryDTO;
 import com.sakai.inventory.infrastructure.repository.ArticleRepository;
-import com.sakai.inventory.shared.exception.FailedValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
@@ -39,7 +38,12 @@ public class CreateNewArticleService {
         if (itemsToSave.isEmpty()) {
             String message = String.format("All %d articles failed validation.", articles.size());
             LOGGER.info(message);
-            throw new FailedValidationException(message);
+            List<FailedEntryDTO> failed = unprocessedItems.stream()
+                    .map(doc -> {
+                        return new FailedEntryDTO(-1, doc.getString("name"), doc.getString("sku"), "validationError");
+                    })
+                    .toList();
+            return new BatchCreateResponseDTO("[]", failed);
         }
 
         List<EnhancedDocument> unprocessed = articleRepository.batchSave(itemsToSave);
