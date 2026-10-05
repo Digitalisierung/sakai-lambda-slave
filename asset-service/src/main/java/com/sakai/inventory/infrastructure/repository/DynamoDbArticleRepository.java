@@ -9,9 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
-import software.amazon.awssdk.enhanced.dynamodb.model.Page;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
@@ -20,11 +18,53 @@ import java.util.*;
 public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
+    private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<EnhancedDocument> articleTable;
 
     public DynamoDbArticleRepository(final DynamoDbEnhancedClient enhancedClient, final String tableName, TableSchema<EnhancedDocument> tableSchema) {
+        this.enhancedClient = enhancedClient;
         this.articleTable = enhancedClient.table(tableName, tableSchema);
-        LOGGER.info("DynamoDbArticleRepository initialized, table {}", tableName);
+        LOGGER.debug("DynamoDbArticleRepository initialized. Table name {}", tableName);
+    }
+
+    /**
+     * Saves a list of EnhancedDocuments in a batch.
+     *
+     * @param documents list of EnhancedDocuments to save (max 25).
+     * @return List<EnhancedDocument> List of unprocessed EnhancedDocuments (empty if all succeeded).
+     */
+    @Override
+    public List<EnhancedDocument> batchSave(List<EnhancedDocument> documents) {
+        LOGGER.info("Batch saving {} documents.", documents.size());
+
+        List<EnhancedDocument> supplementedDocuments = supplementDocumentsWithId(documents);
+
+        WriteBatch.Builder<EnhancedDocument> writeBatchBuilder = WriteBatch.builder(EnhancedDocument.class)
+                .mappedTableResource(articleTable);
+
+        for (EnhancedDocument doc : supplementedDocuments) {
+            writeBatchBuilder.addPutItem(doc);
+        }
+
+        BatchWriteItemEnhancedRequest batchRequest = BatchWriteItemEnhancedRequest.builder()
+                .writeBatches(writeBatchBuilder.build())
+                .build();
+
+        var result = enhancedClient.batchWriteItem(batchRequest);
+
+        List<EnhancedDocument> unprocessed = result.unprocessedPutItemsForTable(articleTable);
+        LOGGER.info("Unprocessed items: {}", unprocessed.size());
+
+        // Gesamtkosten anzeigen, wenn mindestens einer geschrieben war.
+        if (unprocessed.size() != documents.size()) {
+            double wcu = 0.;
+            for (var cc : result.consumedCapacity()) {
+                wcu += cc.capacityUnits();
+            }
+            LOGGER.info("Write Capacity Units total: {}", wcu);
+        }
+
+        return unprocessed;
     }
 
     @Override
@@ -186,5 +226,37 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         }
 
         return split[1];
+    }
+
+    /**
+     * Adds partitionKey, sortKey and entityType to each document in the list.
+     *
+     * @param documents list of documents without partition- and sortKey
+     * @return List<EnhancedDocument> list of documents with partition- and sortKey plus entityType
+     */
+    private List<EnhancedDocument> supplementDocumentsWithId(List<EnhancedDocument> documents) {
+        List<EnhancedDocument> healthyList = new ArrayList<>();
+
+        for (EnhancedDocument doc : documents) {
+            String uuid = UUID.randomUUID().toString();
+            String catalogId = extractCatalogId(doc.getString("catalogId"));
+
+            String partitionKey = "ACC#default__CAT#" + catalogId;
+            String sortKey = "ITEM#" + uuid;
+
+            Map<String, AttributeValue> map = doc.toMap();
+            map.put("partitionKey", AttributeValue.builder().s(partitionKey).build());
+            map.put("sortKey", AttributeValue.builder().s(sortKey).build());
+            map.put("entityType", AttributeValue.builder().s("ARTICLES").build());
+
+            EnhancedDocument healthyDoc = EnhancedDocument.fromAttributeValueMap(map);
+            healthyList.add(healthyDoc);
+        }
+
+        return healthyList;
+    }
+
+    private String extractCatalogId(String catalogId) {
+        return (catalogId != null && !catalogId.isBlank()) ? catalogId : "default";
     }
 }
