@@ -47,7 +47,7 @@ public class CreateNewArticleHandler implements RequestHandler<APIGatewayProxyRe
 
         try {
             EnhancedDocument doc = EnhancedDocument.fromJson(body);
-            List<EnhancedDocument> articles = build(doc);
+            List<EnhancedDocument> articles = expandToList(doc);
 
             if (articles.isEmpty()) {
                 return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, "Article list must not be empty.");
@@ -77,7 +77,7 @@ public class CreateNewArticleHandler implements RequestHandler<APIGatewayProxyRe
         }
     }
 
-    private List<EnhancedDocument> build(EnhancedDocument document) {
+    private List<EnhancedDocument> expandToList(EnhancedDocument document) {
         Integer stock = document.get("stock", Integer.class);
         if (stock == null || stock <= 0) {
             return new ArrayList<>();

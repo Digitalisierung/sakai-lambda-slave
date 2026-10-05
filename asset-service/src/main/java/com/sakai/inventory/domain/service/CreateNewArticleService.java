@@ -38,13 +38,12 @@ public class CreateNewArticleService {
         }
 
         if (itemsToSave.isEmpty()) {
-            String message = String.format("All %d articles failed validation.", articles.size());
-            LOGGER.warn(message);
+            LOGGER.warn("All {} articles failed validation.", articles.size());
             return new BatchCreateResponseDTO("[]", failed);
         }
 
         // weitere Validierung: für active, isFeatured und updatedAt default-Werte setzen, wenn keine Werte vorhanden sind.
-        setDefault(itemsToSave);
+        setDefaults(itemsToSave);
 
         List<EnhancedDocument> unprocessed = articleRepository.batchSave(itemsToSave);
         // jetzt unprecessed aus itemsToSave entfernen und nach failed verschieben.
@@ -73,7 +72,12 @@ public class CreateNewArticleService {
         return null;
     }
 
-    private void setDefault(List<EnhancedDocument> documents) {
+    /**
+     * Setzt Default-Werte für die Felder isActive, isFeatured und updatedAt, wenn vom Client keine Werte nicht gesetz wurden.
+     *
+     * @param documents Liste von EnhancedDocuments, für die die Defaults gesetzt werden sollen.
+     */
+    private void setDefaults(List<EnhancedDocument> documents) {
         for (EnhancedDocument doc : documents) {
             Map<String, AttributeValue> map = doc.toMap();
             AttributeValue createdAt = map.get("updatedAt");
@@ -83,9 +87,9 @@ public class CreateNewArticleService {
                         .build()
                 );
             }
-            AttributeValue active = map.get("active");
+            AttributeValue active = map.get("isActive");
             if (active == null || active.bool() == null) {
-                map.put("active", AttributeValue.builder()
+                map.put("isActive", AttributeValue.builder()
                         .bool(false)
                         .build()
                 );
