@@ -59,16 +59,17 @@ public class CreateNewArticleHandler implements RequestHandler<APIGatewayProxyRe
             }
 
             BatchCreateResponseDTO response = articleService.batchWriteArticles(articles);
+            String created = response.created();
 
-            if (response.created().isEmpty()) {
-                LOGGER.info("The creation of articles did not succeed. Created: {} Failed: {}", 0, response.failed().size());
+            if (created == null || created.isBlank() || created.equals("[]")) {
+                LOGGER.debug("{}", response);
+                LOGGER.warn("The creation of articles did not succeed.");
                 String responseBody = JsonUtil.convertToJson(response);
                 return ResponseUtil.createApiResponse(422, responseBody, ResponseUtil.createExpandedHeader());
             }
 
             String responseBody = JsonUtil.convertToJson(response);
-            LOGGER.info("Create articles request completed. Created: {}, Failed: {}",
-                    0, response.failed().size());
+            LOGGER.info("Create articles request completed. Created: {}, Failed: {}", (articles.size() - response.failed().size()), response.failed().size());
             return ResponseUtil.createApiResponse(HttpStatusCode.CREATED, responseBody, ResponseUtil.createExpandedHeader());
 
         } catch (Exception e) {
