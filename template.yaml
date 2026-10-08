@@ -81,7 +81,7 @@ Resources:
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
                   - !Sub '${InventoryCatalogs.Arn}/index/*'
-  CreateArticlesHandlerRole:
+  BatchWriteArticlesHandlerRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -258,12 +258,12 @@ Resources:
             Path: /articles
             Method: get
             RestApiId: !Ref InventoryApi
-  CreateArticlesHandler:
+  BatchWriteArticlesHandler:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: asset-service/
-      Handler: com.sakai.inventory.api.handler.CreateNewArticleHandler::handleRequest
-      Role: !GetAtt CreateArticlesHandlerRole.Arn
+      Handler: com.sakai.inventory.api.handler.BatchWriteArticlesHandler::handleRequest
+      Role: !GetAtt BatchWriteArticlesHandlerRole.Arn
       Events:
         CreateArticlesApi:
           Type: Api

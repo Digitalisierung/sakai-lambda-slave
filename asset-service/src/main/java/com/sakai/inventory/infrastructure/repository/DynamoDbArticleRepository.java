@@ -1,5 +1,6 @@
 package com.sakai.inventory.infrastructure.repository;
 
+import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,14 +11,19 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 import java.util.*;
+
+import static software.amazon.awssdk.services.dynamodb.model.ReturnValue.ALL_NEW;
 
 public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
+    private final DynamoDbClient dynamoDbClient = DynamoDbFactory.createDynamoDbClient();
     private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<EnhancedDocument> articleTable;
 
@@ -168,6 +174,51 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return new PaginatedResult<>(articles, documentPage.lastEvaluatedKey());
     }
 
+
+    @Override
+    public EnhancedDocument update(String catalogId, String articleId, Map<String, AttributeValue> fields) {
+        String partitionKey = "ACC#default__CAT#" + catalogId;
+        String sortKey = "ITEM#" + articleId;
+
+        LOGGER.debug("Updating article. partitionKey='{}', sortKey='{}'", partitionKey, sortKey);
+
+        // Build SET expression dynamically from provided fields
+        StringBuilder setExpression = new StringBuilder("SET ");
+        Map<String, String> expressionNames = new HashMap<>();
+        Map<String, AttributeValue> expressionValues = new HashMap<>();
+
+        int i = 0;
+        for (Map.Entry<String, AttributeValue> entry : fields.entrySet()) {
+            String nameToken = "#f" + i;
+            String valueToken = ":v" + i;
+            if (i > 0) setExpression.append(", ");
+            setExpression.append(nameToken).append(" = ").append(valueToken);
+            expressionNames.put(nameToken, entry.getKey());
+            expressionValues.put(valueToken, entry.getValue());
+            i++;
+        }
+
+        // conditionExpression: item must already exist
+        Map<String, AttributeValue> keyMap = new HashMap<>();
+        keyMap.put("partitionKey", AttributeValue.builder().s(partitionKey).build());
+        keyMap.put("sortKey", AttributeValue.builder().s(sortKey).build());
+
+        LOGGER.debug("Update article request. Table name: {}", DynamoDbFactory.getTableName());
+        UpdateItemRequest updateRequest = UpdateItemRequest.builder()
+                .tableName(articleTable.tableName())
+                .key(keyMap)
+                .updateExpression(setExpression.toString())
+                .expressionAttributeNames(expressionNames)
+                .expressionAttributeValues(expressionValues)
+                .conditionExpression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
+                .returnValues(ALL_NEW)
+                .build();
+
+
+        var response = dynamoDbClient.updateItem(updateRequest);
+        return replaceIdInDocument(response.attributes());
+    }
+
     private Key buildArticleKey(String id) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Article id must not be null or empty.");
@@ -201,6 +252,22 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return EnhancedDocument.fromAttributeValueMap(map);
     }
 
+    private EnhancedDocument replaceIdInDocument(Map<String, AttributeValue> documentMap) {
+        if (documentMap == null || documentMap.isEmpty()) {
+            return EnhancedDocument.fromAttributeValueMap(Map.of());
+        }
+
+        String partitionKey = documentMap.get("partitionKey").s();
+        String pk = extractIdFromPartitionKey(partitionKey);
+
+        String sortKey = documentMap.get("sortKey").s();
+        String sk = extractIdFromSortKey(sortKey);
+
+        documentMap.replace("partitionKey", AttributeValue.builder().s(pk).build());
+        documentMap.replace("sortKey", AttributeValue.builder().s(sk).build());
+
+        return EnhancedDocument.fromAttributeValueMap(documentMap);
+    }
 
     private String extractIdFromPartitionKey(String partitionKey) {
         if (partitionKey == null || partitionKey.isBlank()) {
@@ -229,7 +296,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     /**
-     * Adds partitionKey, sortKey and entityType to each document in the list.
+     * Adds partitionKey, sortKey, and entityType to each document in the list.
      *
      * @param documents list of documents without partition- and sortKey
      * @return List<EnhancedDocument> list of documents with partition- and sortKey plus entityType

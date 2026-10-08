@@ -54,4 +54,14 @@ public interface ArticleRepository<T> {
      * @return PaginatedResult result with articles and next page token.
      */
     PaginatedResult<T> findCatalogArticles(String id, int limit, Map<String, AttributeValue> exclusiveStartKey);
+
+    /**
+     * Update an existing article. Fails if the item does not exist.
+     *
+     * @param catalogId catalog the article belongs to.
+     * @param articleId UUID of the article (sortKey without prefix).
+     * @param fields    map of fields to update (only mutable fields).
+     * @return updated document.
+     */
+    T update(String catalogId, String articleId, Map<String, AttributeValue> fields);
 }
