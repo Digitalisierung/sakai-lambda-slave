@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.sakai.inventory.api.dto.UpdateArticleRequestDTO;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.sakai.inventory.domain.service.UpdateArticleService;
 import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.repository.ArticleRepository;
@@ -28,11 +28,11 @@ import java.util.Map;
 public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdateArticleHandler.class);
 
-    private final UpdateArticleService updateArticleService;
+    private final UpdateArticleService articleService;
 
     public UpdateArticleHandler() {
         super();
-        updateArticleService = new UpdateArticleService(createArticleRepository());
+        articleService = new UpdateArticleService(createArticleRepository());
     }
 
     @Override
@@ -51,23 +51,15 @@ public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyReque
         }
 
         try {
-            UpdateArticleRequestDTO updateRequest = JsonUtil.parseFromJsonToObject(body, UpdateArticleRequestDTO.class);
+            Map<String, Object> bodyMap = JsonUtil.parseFromJsonToObject(body, new TypeReference<>() {
+            });
 
-            // catalogId aus Query-Parameter oder Default
-            Map<String, String> queryParams = request.getQueryStringParameters();
-            String catalogId = (queryParams != null && queryParams.containsKey("catalogId"))
-                    ? queryParams.get("catalogId")
-                    : "default";
-
-            EnhancedDocument updated = updateArticleService.update(catalogId, articleId, updateRequest);
-            String responseBody = updated.toJson();
+            Map<String, Object> updated = articleService.updateAll(articleId, bodyMap);
+            String responseBody = JsonUtil.convertToJson(updated);
 
             LOGGER.info("Update article request completed. articleId='{}'", articleId);
             return ResponseUtil.createApiResponse(HttpStatusCode.OK, responseBody, ResponseUtil.createExpandedHeader());
 
-        } catch (IllegalArgumentException e) {
-            LOGGER.warn("Validation failed: {}", e.getMessage());
-            return ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, e.getMessage());
         } catch (Exception e) {
             LOGGER.error("Failed to handle update article request. articleId='{}'", articleId, e);
             return ExceptionHandler.handleException(e);

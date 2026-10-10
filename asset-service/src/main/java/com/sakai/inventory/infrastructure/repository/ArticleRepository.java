@@ -64,4 +64,6 @@ public interface ArticleRepository<T> {
      * @return updated document.
      */
     T update(String catalogId, String articleId, Map<String, AttributeValue> fields);
+
+    Map<String, Object> updateAll(String catalogId, String articleId, Map<String, Object> document);
 }

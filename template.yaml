@@ -104,6 +104,29 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
+  UpdateArticleHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbUpdateItem
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
   ListCatalogsHandlerServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -270,6 +293,19 @@ Resources:
           Properties:
             Path: /articles
             Method: post
+            RestApiId: !Ref InventoryApi
+  UpdateArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: asset-service/
+      Handler: com.sakai.inventory.api.handler.UpdateArticleHandler::handleRequest
+      Role: !GetAtt UpdateArticleHandlerRole.Arn
+      Events:
+        UpdateArticleApi:
+          Type: Api
+          Properties:
+            Path: /articles/{id}
+            Method: put
             RestApiId: !Ref InventoryApi
   ListCatalogsHandler:
     Type: AWS::Serverless::Function

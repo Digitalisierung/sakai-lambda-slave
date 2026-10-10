@@ -5,10 +5,7 @@ import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.*;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -174,6 +171,30 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return new PaginatedResult<>(articles, documentPage.lastEvaluatedKey());
     }
 
+    @Override
+    public Map<String, Object> updateAll(String catalogId, String articleId, Map<String, Object> document) {
+        String partitionKey = "ACC#default__CAT#" + catalogId;
+        String sortKey = "ITEM#" + articleId;
+
+        document.put("partitionKey", partitionKey);
+        document.put("sortKey", sortKey);
+
+        EnhancedDocument enhancedDocument = convertObjectMapToDocument(document);
+
+        Expression conditionExpression = Expression.builder()
+                .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
+                .build();
+
+        UpdateItemEnhancedRequest<EnhancedDocument> request = UpdateItemEnhancedRequest.builder(EnhancedDocument.class)
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .conditionExpression(conditionExpression)
+                .item(enhancedDocument)
+                .build();
+
+        UpdateItemEnhancedResponse<EnhancedDocument> response = articleTable.updateItemWithResponse(request);
+        EnhancedDocument responseDocument = response.attributes();
+        return convertDocumentToObjectMap(responseDocument);
+    }
 
     @Override
     public EnhancedDocument update(String catalogId, String articleId, Map<String, AttributeValue> fields) {
@@ -217,6 +238,55 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
 
         var response = dynamoDbClient.updateItem(updateRequest);
         return replaceIdInDocument(response.attributes());
+    }
+
+    private Map<String, Object> convertDocumentToObjectMap(EnhancedDocument document) {
+        Map<String, Object> converted = new HashMap<>();
+        Map<String, AttributeValue> map = document.toMap();
+        for (Map.Entry<String, AttributeValue> entry : map.entrySet()) {
+            String key = entry.getKey();
+            AttributeValue value = entry.getValue();
+            AttributeValue.Type type = value.type();
+            var object = switch (type) {
+                case B -> value.b();
+                case BOOL -> value.bool();
+                case S -> value.s();
+                case N -> value.n();
+                case L -> value.l();
+                case M -> value.m();
+                default -> null;
+            };
+            converted.put(key, object);
+        }
+        return converted;
+    }
+
+    private EnhancedDocument convertObjectMapToDocument(Map<String, Object> map) {
+        Map<String, AttributeValue> valueMap = new HashMap<>();
+
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            switch (value) {
+                case String sVal -> valueMap.put(key, AttributeValue.builder()
+                        .s(sVal)
+                        .build());
+                case Integer iVal -> valueMap.put(key, AttributeValue.builder()
+                        .n(String.valueOf(iVal))
+                        .build());
+                case Double dVal -> valueMap.put(key, AttributeValue.builder()
+                        .n(String.valueOf(dVal))
+                        .build());
+                case Boolean bVal -> valueMap.put(key, AttributeValue.builder()
+                        .bool(bVal)
+                        .build());
+                default -> {
+                }
+            }
+        }
+
+        return EnhancedDocument.fromAttributeValueMap(valueMap);
     }
 
     private Key buildArticleKey(String id) {
