@@ -2,6 +2,7 @@ package com.sakai.inventory.infrastructure.repository;
 
 import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
+import com.sakai.inventory.shared.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
@@ -14,6 +15,7 @@ import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static software.amazon.awssdk.services.dynamodb.model.ReturnValue.ALL_NEW;
 
@@ -179,10 +181,24 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         document.put("partitionKey", partitionKey);
         document.put("sortKey", sortKey);
 
+        // Article mit articleId lesen.
+        Optional<EnhancedDocument> existingDocument = findByIdViaGsi(articleId);
+
+        if (existingDocument.isEmpty()) {
+            throw new NotFoundException("Article with id '" + articleId + "' not found.");
+        }
+
+        // Version aus DB nehmen - nicht vom Client.
+        String currentVersion = existingDocument.get().getString("version");
+        int expectedVersion = Integer.parseInt(currentVersion);
+        document.put("version", expectedVersion + 1);
+
         EnhancedDocument enhancedDocument = convertObjectMapToDocument(document);
 
         Expression conditionExpression = Expression.builder()
-                .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
+                .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey) AND #v = :expectedVersion")
+                .expressionNames(Map.of("#v", "version"))
+                .expressionValues(Map.of(":expectedVersion", AttributeValue.builder().n(String.valueOf(expectedVersion)).build()))
                 .build();
 
         UpdateItemEnhancedRequest<EnhancedDocument> request = UpdateItemEnhancedRequest.builder(EnhancedDocument.class)
@@ -252,13 +268,23 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
                 case BOOL -> value.bool();
                 case S -> value.s();
                 case N -> value.n();
-                case L -> value.l();
-                case M -> value.m();
+                case L -> value.l().stream().map(this::convertAttributeValueToObject).toList();
+                case M ->
+                        value.m().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> convertAttributeValueToObject(v.getValue())));
                 default -> null;
             };
             converted.put(key, object);
         }
         return converted;
+    }
+
+    private Object convertAttributeValueToObject(AttributeValue value) {
+        return switch (value.type()) {
+            case S -> value.s();
+            case N -> value.n();
+            case BOOL -> value.bool();
+            default -> "";
+        };
     }
 
     private EnhancedDocument convertObjectMapToDocument(Map<String, Object> map) {
@@ -385,6 +411,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
             map.put("partitionKey", AttributeValue.builder().s(partitionKey).build());
             map.put("sortKey", AttributeValue.builder().s(sortKey).build());
             map.put("entityType", AttributeValue.builder().s("ARTICLES").build());
+            map.put("version", AttributeValue.builder().n("0").build());
 
             EnhancedDocument healthyDoc = EnhancedDocument.fromAttributeValueMap(map);
             healthyList.add(healthyDoc);

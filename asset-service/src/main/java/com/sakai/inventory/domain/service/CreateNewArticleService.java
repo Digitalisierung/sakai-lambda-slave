@@ -101,6 +101,13 @@ public class CreateNewArticleService {
                         .build()
                 );
             }
+            AttributeValue catalogId = map.get("catalogId");
+            if (catalogId == null || catalogId.s() == null || catalogId.s().isBlank()) {
+                map.put("catalogId", AttributeValue.builder()
+                        .s("default")
+                        .build()
+                );
+            }
         }
     }
 
