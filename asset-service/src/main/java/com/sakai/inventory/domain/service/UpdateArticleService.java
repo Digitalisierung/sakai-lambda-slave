@@ -20,7 +20,7 @@ public class UpdateArticleService {
         this.articleRepository = articleRepository;
     }
 
-    public Map<String, Object> updateAll(String articleId, Map<String, Object> requestMap) {
+    public Map<String, Object> update(String articleId, Map<String, Object> requestMap) {
         LOGGER.info("Updating all article. articleId='{}'", articleId);
 
         // aus map sollte stock entfernt werden, da immutable und createdAt (auch immutable).
@@ -29,8 +29,10 @@ public class UpdateArticleService {
         String validateError = validateRequest(requestMap);
         if (validateError != null) throw new FailedValidationException(validateError);
 
-        requestMap.put("updatedAt", Instant.now(Clock.systemUTC()));
         requestMap.remove("stock");
+        requestMap.remove("createdAt");
+        String updateTime = Instant.now(Clock.systemUTC()).toString();
+        requestMap.put("updatedAt", updateTime);
         String catalogId = (String) requestMap.get("catalogId");
         return articleRepository.updateAll(catalogId, articleId, requestMap);
     }

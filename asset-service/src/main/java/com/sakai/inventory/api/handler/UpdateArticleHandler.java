@@ -54,7 +54,7 @@ public class UpdateArticleHandler implements RequestHandler<APIGatewayProxyReque
             Map<String, Object> bodyMap = JsonUtil.parseFromJsonToObject(body, new TypeReference<>() {
             });
 
-            Map<String, Object> updated = articleService.updateAll(articleId, bodyMap);
+            Map<String, Object> updated = articleService.update(articleId, bodyMap);
             String responseBody = JsonUtil.convertToJson(updated);
 
             LOGGER.info("Update article request completed. articleId='{}'", articleId);

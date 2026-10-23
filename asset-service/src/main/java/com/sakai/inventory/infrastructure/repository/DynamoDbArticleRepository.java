@@ -188,7 +188,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
             throw new NotFoundException("Article with id '" + articleId + "' not found.");
         }
 
-        // Version aus DB nehmen - nicht vom Client.
+        // Version in DB auslesen (kommt nicht von Client).
         String currentVersion = existingDocument.get().getString("version");
         int expectedVersion = Integer.parseInt(currentVersion);
         document.put("version", expectedVersion + 1);
@@ -257,33 +257,37 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     private Map<String, Object> convertDocumentToObjectMap(EnhancedDocument document) {
+        return convertToObjectMap(document.toMap());
+    }
+
+    private Map<String, Object> convertToObjectMap(Map<String, AttributeValue> map) {
         Map<String, Object> converted = new HashMap<>();
-        Map<String, AttributeValue> map = document.toMap();
         for (Map.Entry<String, AttributeValue> entry : map.entrySet()) {
             String key = entry.getKey();
             AttributeValue value = entry.getValue();
-            AttributeValue.Type type = value.type();
-            var object = switch (type) {
-                case B -> value.b();
-                case BOOL -> value.bool();
-                case S -> value.s();
-                case N -> value.n();
-                case L -> value.l().stream().map(this::convertAttributeValueToObject).toList();
-                case M ->
-                        value.m().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> convertAttributeValueToObject(v.getValue())));
-                default -> null;
-            };
+            var object = convertToObject(value);
             converted.put(key, object);
         }
         return converted;
     }
 
-    private Object convertAttributeValueToObject(AttributeValue value) {
-        return switch (value.type()) {
+    private Object convertToObject(AttributeValue value) {
+        AttributeValue.Type type = value.type();
+        return switch (type) {
+            case B -> value.b();
+            case BOOL -> value.bool();
             case S -> value.s();
             case N -> value.n();
-            case BOOL -> value.bool();
-            default -> "";
+            case L -> value.l().stream()
+                    .map(this::convertToObject)
+                    .toList();
+            case M -> value.m().entrySet().stream()
+                    .collect(
+                            Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entry -> convertToObject(entry.getValue()))
+                    );
+            default -> null;
         };
     }
 
