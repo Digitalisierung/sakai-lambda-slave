@@ -34,7 +34,7 @@ public class UpdateArticleService {
         String updateTime = Instant.now(Clock.systemUTC()).toString();
         requestMap.put("updatedAt", updateTime);
         String catalogId = (String) requestMap.get("catalogId");
-        return articleRepository.updateAll(catalogId, articleId, requestMap);
+        return articleRepository.update(catalogId, articleId, requestMap);
     }
 
     private String validateRequest(Map<String, Object> request) {
