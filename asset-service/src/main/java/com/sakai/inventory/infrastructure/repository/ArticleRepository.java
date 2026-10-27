@@ -63,7 +63,5 @@ public interface ArticleRepository<T> {
      * @param fields    map of fields to update (only mutable fields).
      * @return updated document.
      */
-    // T update(String catalogId, String articleId, Map<String, AttributeValue> fields);
-
-    Map<String, Object> update(String catalogId, String articleId, Map<String, Object> document);
+    Map<String, Object> update(String catalogId, String articleId, Map<String, Object> fields);
 }

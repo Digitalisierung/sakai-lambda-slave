@@ -220,50 +220,6 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return convertDocumentToObjectMap(finalDocument);
     }
 
-//    @Override
-//    public EnhancedDocument update(String catalogId, String articleId, Map<String, AttributeValue> fields) {
-//        String partitionKey = "ACC#default__CAT#" + catalogId;
-//        String sortKey = "ITEM#" + articleId;
-//
-//        LOGGER.debug("Updating article. partitionKey='{}', sortKey='{}'", partitionKey, sortKey);
-//
-//        // Build SET expression dynamically from provided fields
-//        StringBuilder setExpression = new StringBuilder("SET ");
-//        Map<String, String> expressionNames = new HashMap<>();
-//        Map<String, AttributeValue> expressionValues = new HashMap<>();
-//
-//        int i = 0;
-//        for (Map.Entry<String, AttributeValue> entry : fields.entrySet()) {
-//            String nameToken = "#f" + i;
-//            String valueToken = ":v" + i;
-//            if (i > 0) setExpression.append(", ");
-//            setExpression.append(nameToken).append(" = ").append(valueToken);
-//            expressionNames.put(nameToken, entry.getKey());
-//            expressionValues.put(valueToken, entry.getValue());
-//            i++;
-//        }
-//
-//        // conditionExpression: item must already exist
-//        Map<String, AttributeValue> keyMap = new HashMap<>();
-//        keyMap.put("partitionKey", AttributeValue.builder().s(partitionKey).build());
-//        keyMap.put("sortKey", AttributeValue.builder().s(sortKey).build());
-//
-//        LOGGER.debug("Update article request. Table name: {}", DynamoDbFactory.getTableName());
-//        UpdateItemRequest updateRequest = UpdateItemRequest.builder()
-//                .tableName(articleTable.tableName())
-//                .key(keyMap)
-//                .updateExpression(setExpression.toString())
-//                .expressionAttributeNames(expressionNames)
-//                .expressionAttributeValues(expressionValues)
-//                .conditionExpression("attribute_exists(partitionKey) AND attribute_exists(sortKey)")
-//                .returnValues(ALL_NEW)
-//                .build();
-//
-//
-//        var response = dynamoDbClient.updateItem(updateRequest);
-//        return replaceIdInDocument(response.attributes());
-//    }
-
     private Map<String, Object> convertDocumentToObjectMap(EnhancedDocument document) {
         return convertToObjectMap(document.toMap());
     }
@@ -335,12 +291,6 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     private Key buildArticleKeyForGsiEntityType(String GSI_index, String sortKey) {
-//        if (id == null || id.isBlank()) {
-//            throw new IllegalArgumentException("Article id must not be null or empty.");
-//        }
-
-        //String sortKey = "ITEM#" + id;
-
         return Key.builder()
                 .partitionValue(GSI_index) // ARTICLES
                 .sortValue(sortKey)
@@ -354,15 +304,10 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     private EnhancedDocument replaceIdInDocument(EnhancedDocument document) {
-//        String partitionKey = document.getString("partitionKey");
-//        String pk = extractIdFromPartitionKey(partitionKey);
-
         String sortKey = document.getString("sortKey");
         String sk = extractIdFromSortKey(sortKey);
 
         Map<String, AttributeValue> map = document.toMap();
-//        map.replace("partitionKey", AttributeValue.builder().s(pk).build());
-//        map.replace("sortKey", AttributeValue.builder().s(sk).build());
 
         map.remove("partitionKey");
         map.remove("sortKey");
