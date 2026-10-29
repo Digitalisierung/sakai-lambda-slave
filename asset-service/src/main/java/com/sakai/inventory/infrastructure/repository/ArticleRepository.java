@@ -1,0 +1,67 @@
+package com.sakai.inventory.infrastructure.repository;
+
+import com.sakai.inventory.infrastructure.factory.PaginatedResult;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Repository interface for Article domain objects.
+ * Provides domain-oriented operations for article management.
+ */
+public interface ArticleRepository<T> {
+    /**
+     * Save a batch of articles to DynamoDB using batchWriteItem.
+     *
+     * @param documents list of EnhancedDocuments to save (max 25).
+     * @return list of documents that failed to write (unprocessed items).
+     */
+    List<T> batchSave(List<T> documents);
+
+    /**
+     * Find an article by its unique identifier.
+     *
+     * @param id equal partitionKey.
+     * @return Optional<T>
+     */
+    Optional<T> findById(String id);
+
+    /**
+     * Find an article by its unique identifier.
+     *
+     * @param articleId equal UUID part of sortKey.
+     * @return Optional<EnhancedDocument> of Articles.
+     */
+    Optional<T> findByIdViaGsi(String articleId);
+
+    /**
+     * Find all articles with pagination support. Uses Query.
+     *
+     * @param limit             Maximum number of articles to return.
+     * @param exclusiveStartKey DynamoDb pagination token (null for first page).
+     * @return PaginatedResult result with articles and next page token.
+     */
+    PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
+
+    /**
+     * Find articles in catalog with pagination support.
+     *
+     * @param id                Catalog ID.
+     * @param limit             Maximum number of articles to return.
+     * @param exclusiveStartKey DynamoDb pagination token (null for first page).
+     * @return PaginatedResult result with articles and next page token.
+     */
+    PaginatedResult<T> findCatalogArticles(String id, int limit, Map<String, AttributeValue> exclusiveStartKey);
+
+    /**
+     * Update an existing article. Fails if the item does not exist.
+     *
+     * @param catalogId catalog the article belongs to.
+     * @param articleId UUID of the article (sortKey without prefix).
+     * @param fields    map of fields to update (only mutable fields).
+     * @return updated document.
+     */
+    Map<String, Object> update(String catalogId, String articleId, Map<String, Object> fields);
+}

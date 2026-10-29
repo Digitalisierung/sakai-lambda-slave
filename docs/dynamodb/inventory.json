@@ -1,0 +1,531 @@
+{
+  "articles": [
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7001#871e9bf3-e1e8-4413-8f35-eb4757a5cfe8"
+          },
+          "sku": {
+            "S": "SKU-7001"
+          },
+          "name": {
+            "S": "Antike Vase aus der Ming-Dynastie"
+          },
+          "description": {
+            "S": "Eine gut erhaltene Porzellanvase mit blau-weißen Mustern, ca. 16. Jahrhundert."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/ming_vase.jpg"
+          },
+          "state": {
+            "S": "AVAILABLE"
+          },
+          "isFeatured": {
+            "BOOL": true
+          },
+          "createdAt": {
+            "S": "2024-01-15T10:30:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-03-10T14:22:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7002#45c14215-9be0-4aa8-a038-3c2c6ec539e2"
+          },
+          "sku": {
+            "S": "SKU-7002"
+          },
+          "name": {
+            "S": "Barock-Gemälde 'Landschaft mit Fluss'"
+          },
+          "description": {
+            "S": "Öl auf Leinwand, 18. Jahrhundert, Rahmen original."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/barock_painting.jpg"
+          },
+          "state": {
+            "S": "UNDER_EVALUATION"
+          },
+          "isFeatured": {
+            "BOOL": false
+          },
+          "createdAt": {
+            "S": "2024-02-01T09:15:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-02-28T16:45:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7003#1216143d-2679-4d76-984f-a9a755dc730f"
+          },
+          "sku": {
+            "S": "SKU-7003"
+          },
+          "name": {
+            "S": "Renaissance-Bronzeskulptur 'Reiter'"
+          },
+          "description": {
+            "S": "Kleine Bronzestatue, italienische Arbeit, 17. Jahrhundert."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/bronze_rider.jpg"
+          },
+          "state": {
+            "S": "AVAILABLE"
+          },
+          "isFeatured": {
+            "BOOL": true
+          },
+          "createdAt": {
+            "S": "2023-11-20T11:00:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-01-05T12:30:00Z"
+          },
+          "dynamicFields": {
+            "M": {
+              "provenance": {
+                "S": "Sammlung Dr. Schmidt, Auktion Haus Müller 2019"
+              },
+              "material": {
+                "S": "Bronze (gepatiniert)"
+              },
+              "weight_kg": {
+                "S": "2.8 kg"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7004#68081736-e8ef-4bb0-b21c-36349344b394"
+          },
+          "sku": {
+            "S": "SKU-7004"
+          },
+          "name": {
+            "S": "Art Deco Sekretär aus Nussbaum"
+          },
+          "description": {
+            "S": "Möbelstück mit Intarsien, Frankreich um 1925."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/artdeco_desk.jpg"
+          },
+          "state": {
+            "S": "IN_USE"
+          },
+          "isFeatured": {
+            "BOOL": false
+          },
+          "createdAt": {
+            "S": "2023-10-05T14:20:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-03-15T10:10:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7005#90302335-efe2-4d08-abe2-0f9754d886d7"
+          },
+          "sku": {
+            "S": "SKU-7005"
+          },
+          "name": {
+            "S": "Samurai-Rüstung (Gusoku)"
+          },
+          "description": {
+            "S": "Komplette Rüstung aus Eisen, Seide und Leder, Edo-Periode."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/samurai_armor.jpg"
+          },
+          "state": {
+            "S": "AVAILABLE"
+          },
+          "isFeatured": {
+            "BOOL": true
+          },
+          "createdAt": {
+            "S": "2024-03-01T08:45:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-03-01T08:45:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7006#3e95353a-5a66-4226-93a1-2fcd625c3627"
+          },
+          "sku": {
+            "S": "SKU-7006"
+          },
+          "name": {
+            "S": "Persischer Teppich 'Isfahan'"
+          },
+          "description": {
+            "S": "Handgeknüpfter Seidenteppich, 2.3 x 1.6 m, Anfang 20. Jh."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/isfahan_carpet.jpg"
+          },
+          "state": {
+            "S": "UNDER_EVALUATION"
+          },
+          "isFeatured": {
+            "BOOL": false
+          },
+          "createdAt": {
+            "S": "2024-02-10T13:10:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-02-25T09:30:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7007#cb43febd-ea3e-4e28-94c5-dc19fd69d131"
+          },
+          "sku": {
+            "S": "SKU-7007"
+          },
+          "name": {
+            "S": "Moderne Skulptur 'Equilibrium'"
+          },
+          "description": {
+            "S": "Abstrakte Stahlskulptur des zeitgenössischen Künstlers M. Chen."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/equilibrium_sculpture.jpg"
+          },
+          "state": {
+            "S": "AVAILABLE"
+          },
+          "isFeatured": {
+            "BOOL": true
+          },
+          "createdAt": {
+            "S": "2024-01-30T16:00:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-03-12T11:20:00Z"
+          },
+          "dynamicFields": {
+            "M": {
+              "artist": {
+                "S": "M. Chen"
+              },
+              "creation_year": {
+                "S": "2022"
+              },
+              "technique": {
+                "S": "Geschweißter Edelstahl"
+              },
+              "exhibitions": {
+                "S": "Biennale Venedig 2023"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7008#9dc306ed-8428-4a05-883e-9cdaa6f4072d"
+          },
+          "sku": {
+            "S": "SKU-7008"
+          },
+          "name": {
+            "S": "Klassische Violine 'Stradivarius-Kopie'"
+          },
+          "description": {
+            "S": "Geige deutscher Arbeit um 1900, ausgezeichneter Klang."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/violin_strad_copy.jpg"
+          },
+          "state": {
+            "S": "AVAILABLE"
+          },
+          "isFeatured": {
+            "BOOL": false
+          },
+          "createdAt": {
+            "S": "2023-12-15T10:45:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-02-20T15:15:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7009#f5951633-3bf1-4c70-bff1-11d715f751ae"
+          },
+          "sku": {
+            "S": "SKU-7009"
+          },
+          "name": {
+            "S": "Ägyptische Uschebti-Figur"
+          },
+          "description": {
+            "S": "Fayence-Statuette, Spätzeit, für Grabbeigabe bestimmt."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/ushabti_figure.jpg"
+          },
+          "state": {
+            "S": "RESERVED"
+          },
+          "isFeatured": {
+            "BOOL": false
+          },
+          "createdAt": {
+            "S": "2024-02-28T12:30:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-03-14T17:00:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "ARTICLES"
+          },
+          "sortKey": {
+            "S": "ARTICLES#SKU-7010#ca5c186c-adbb-4578-b9c8-c0dc19945af1"
+          },
+          "sku": {
+            "S": "SKU-7010"
+          },
+          "name": {
+            "S": "Jugendstil-Vase von Émile Gallé"
+          },
+          "description": {
+            "S": "Glasvase mit eingeschliffenen Pflanzendekoren, Frankreich um 1900."
+          },
+          "price": {
+            "N": "0"
+          },
+          "inventory": {
+            "N": "1"
+          },
+          "imageUrl": {
+            "S": "https://inventory-images.s3.eu-central-1.amazonaws.com/galle_vase.jpg"
+          },
+          "state": {
+            "S": "AVAILABLE"
+          },
+          "isFeatured": {
+            "BOOL": true
+          },
+          "createdAt": {
+            "S": "2024-01-10T09:30:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-03-05T14:05:00Z"
+          },
+          "dynamicFields": {
+            "M": {}
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "CATALOGS"
+          },
+          "sortKey": {
+            "S": "CATALOGS#CAT-125#METADATA"
+          },
+          "name": {
+            "S": "Musik"
+          },
+          "description": {
+            "S": "Alle Artikel zu Musik."
+          },
+          "createdAt": {
+            "S": "2024-01-01T00:00:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-01-01T00:00:00Z"
+          },
+          "color": {
+            "S": "#fade55"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "partitionKey": {
+            "S": "CATALOGS"
+          },
+          "sortKey": {
+            "S": "CATALOGS#CAT-123#METADATA"
+          },
+          "name": {
+            "S": "Phones"
+          },
+          "description": {
+            "S": "Alle Apple Phones."
+          },
+          "createdAt": {
+            "S": "2024-02-02T10:00:00Z"
+          },
+          "updatedAt": {
+            "S": "2024-02-02T10:00:00Z"
+          },
+          "color": {
+            "S": "#fcdsss"
+          }
+        }
+      }
+    }
+  ]
+}
