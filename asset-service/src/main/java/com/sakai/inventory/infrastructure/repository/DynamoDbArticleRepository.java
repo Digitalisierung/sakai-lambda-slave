@@ -1,23 +1,25 @@
 package com.sakai.inventory.infrastructure.repository;
 
+import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
+import com.sakai.inventory.shared.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.*;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
+    private final DynamoDbClient dynamoDbClient = DynamoDbFactory.createDynamoDbClient();
     private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<EnhancedDocument> articleTable;
 
@@ -50,7 +52,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
                 .writeBatches(writeBatchBuilder.build())
                 .build();
 
-        var result = enhancedClient.batchWriteItem(batchRequest);
+        BatchWriteResult result = enhancedClient.batchWriteItem(batchRequest);
 
         List<EnhancedDocument> unprocessed = result.unprocessedPutItemsForTable(articleTable);
         LOGGER.info("Unprocessed items: {}", unprocessed.size());
@@ -71,7 +73,11 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     public Optional<EnhancedDocument> findById(String id) {
         LOGGER.debug("Finding article by id {}", id);
 
-        Key key = buildArticleKey(id);
+        String partitionKey = "ACC#default__CAT#" + id;
+        String sortKey = "ITEM#" + id;
+        String gsi_entityType = "ARTICLES";
+
+        Key key = buildArticleKeyForGsiEntityType(gsi_entityType, sortKey);
 
         EnhancedDocument rohDocument = articleTable.getItem(key);
         EnhancedDocument document = replaceIdInDocument(rohDocument);
@@ -82,7 +88,12 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     @Override
     public Optional<EnhancedDocument> findByIdViaGsi(String id) {
         LOGGER.debug("Querying single article by id='{}' using GSI_entityType.", id);
-        QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKey(id));
+
+        String partitionKey = "ACC#default__CAT#" + id;
+        String sortKey = "ITEM#" + id;
+        String gsi_entityType = "ARTICLES";
+
+        QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKeyForGsiEntityType(gsi_entityType, sortKey));
 
         QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
                 .queryConditional(queryConditional)
@@ -101,7 +112,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     public PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey) {
         LOGGER.debug("Paginated querying (all) articles using GSI_entityType. Limit {}, start key {}", limit, exclusiveStartKey != null);
 
-        Key key = buildArticleKey();
+        Key key = buildArticleKeyForGsiEntityType("ARTICLES");
 
         QueryConditional query = QueryConditional.keyEqualTo(key);
 
@@ -168,39 +179,162 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return new PaginatedResult<>(articles, documentPage.lastEvaluatedKey());
     }
 
-    private Key buildArticleKey(String id) {
-        if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException("Article id must not be null or empty.");
+    @Override
+    public Map<String, Object> update(String catalogId, String articleId, Map<String, Object> document) {
+        String partitionKey = "ACC#default__CAT#" + catalogId;
+        String sortKey = "ITEM#" + articleId;
+
+        document.put("partitionKey", partitionKey);
+        document.put("sortKey", sortKey);
+
+        // Article mit articleId finden.
+        Key key = this.buildArticleKey(partitionKey, sortKey);
+        Optional<EnhancedDocument> existingDocument = Optional.ofNullable(articleTable.getItem(key));
+
+        if (existingDocument.isEmpty()) {
+            throw new NotFoundException("Article with id '" + articleId + "' not found.");
         }
 
-        String sortKey = "ITEM#" + id;
+        // Version in DB auslesen (kommt nicht von Client).
+        String currentVersion = existingDocument.get().getString("version");
+        int expectedVersion = Integer.parseInt(currentVersion);
+        document.put("version", expectedVersion + 1);
 
+        EnhancedDocument enhancedDocument = convertObjectMapToDocument(document);
+
+        Expression conditionExpression = Expression.builder()
+                .expression("attribute_exists(partitionKey) AND attribute_exists(sortKey) AND #v = :expectedVersion")
+                .expressionNames(Map.of("#v", "version"))
+                .expressionValues(Map.of(":expectedVersion", AttributeValue.builder().n(String.valueOf(expectedVersion)).build()))
+                .build();
+
+        UpdateItemEnhancedRequest<EnhancedDocument> request = UpdateItemEnhancedRequest.builder(EnhancedDocument.class)
+                .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                .conditionExpression(conditionExpression)
+                .item(enhancedDocument)
+                .build();
+
+        UpdateItemEnhancedResponse<EnhancedDocument> response = articleTable.updateItemWithResponse(request);
+        EnhancedDocument responseDocument = response.attributes();
+        EnhancedDocument finalDocument = replaceIdInDocument(responseDocument);
+        return convertDocumentToObjectMap(finalDocument);
+    }
+
+    private Map<String, Object> convertDocumentToObjectMap(EnhancedDocument document) {
+        return convertToObjectMap(document.toMap());
+    }
+
+    private Map<String, Object> convertToObjectMap(Map<String, AttributeValue> map) {
+        Map<String, Object> converted = new HashMap<>();
+        for (Map.Entry<String, AttributeValue> entry : map.entrySet()) {
+            String key = entry.getKey();
+            AttributeValue value = entry.getValue();
+            var object = convertToObject(value);
+            converted.put(key, object);
+        }
+        return converted;
+    }
+
+    private Object convertToObject(AttributeValue value) {
+        AttributeValue.Type type = value.type();
+        return switch (type) {
+            case B -> value.b();
+            case BOOL -> value.bool();
+            case S -> value.s();
+            case N -> value.n();
+            case L -> value.l().stream()
+                    .map(this::convertToObject)
+                    .toList();
+            case M -> value.m().entrySet().stream()
+                    .collect(
+                            Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entry -> convertToObject(entry.getValue()))
+                    );
+            default -> null;
+        };
+    }
+
+    private EnhancedDocument convertObjectMapToDocument(Map<String, Object> map) {
+        Map<String, AttributeValue> valueMap = new HashMap<>();
+
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            switch (value) {
+                case String sVal -> valueMap.put(key, AttributeValue.builder()
+                        .s(sVal)
+                        .build());
+                case Integer iVal -> valueMap.put(key, AttributeValue.builder()
+                        .n(String.valueOf(iVal))
+                        .build());
+                case Double dVal -> valueMap.put(key, AttributeValue.builder()
+                        .n(String.valueOf(dVal))
+                        .build());
+                case Boolean bVal -> valueMap.put(key, AttributeValue.builder()
+                        .bool(bVal)
+                        .build());
+                default -> {
+                }
+            }
+        }
+
+        return EnhancedDocument.fromAttributeValueMap(valueMap);
+    }
+
+    private Key buildArticleKey(String partitionKey, String sortKey) {
         return Key.builder()
-                .partitionValue("ARTICLES")
+                .partitionValue(partitionKey)
                 .sortValue(sortKey)
                 .build();
     }
 
-    private Key buildArticleKey() {
+    private Key buildArticleKeyForGsiEntityType(String GSI_index, String sortKey) {
         return Key.builder()
-                .partitionValue("ARTICLES")
+                .partitionValue(GSI_index) // ARTICLES
+                .sortValue(sortKey)
+                .build();
+    }
+
+    private Key buildArticleKeyForGsiEntityType(String gsi_entityType) {
+        return Key.builder()
+                .partitionValue(gsi_entityType)
                 .build();
     }
 
     private EnhancedDocument replaceIdInDocument(EnhancedDocument document) {
-        String partitionKey = document.getString("partitionKey");
-        String pk = extractIdFromPartitionKey(partitionKey);
-
         String sortKey = document.getString("sortKey");
         String sk = extractIdFromSortKey(sortKey);
 
         Map<String, AttributeValue> map = document.toMap();
-        map.replace("partitionKey", AttributeValue.builder().s(pk).build());
-        map.replace("sortKey", AttributeValue.builder().s(sk).build());
+
+        map.remove("partitionKey");
+        map.remove("sortKey");
+        map.remove("entityType");
+        map.remove("version");
+
+        map.put("id", AttributeValue.builder().s(sk).build());
 
         return EnhancedDocument.fromAttributeValueMap(map);
     }
 
+    private EnhancedDocument replaceIdInDocument(Map<String, AttributeValue> documentMap) {
+        if (documentMap == null || documentMap.isEmpty()) {
+            return EnhancedDocument.fromAttributeValueMap(Map.of());
+        }
+
+        String partitionKey = documentMap.get("partitionKey").s();
+        String pk = extractIdFromPartitionKey(partitionKey);
+
+        String sortKey = documentMap.get("sortKey").s();
+        String sk = extractIdFromSortKey(sortKey);
+
+        documentMap.replace("partitionKey", AttributeValue.builder().s(pk).build());
+        documentMap.replace("sortKey", AttributeValue.builder().s(sk).build());
+
+        return EnhancedDocument.fromAttributeValueMap(documentMap);
+    }
 
     private String extractIdFromPartitionKey(String partitionKey) {
         if (partitionKey == null || partitionKey.isBlank()) {
@@ -229,7 +363,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     /**
-     * Adds partitionKey, sortKey and entityType to each document in the list.
+     * Adds partitionKey, sortKey, and entityType to each document in the list.
      *
      * @param documents list of documents without partition- and sortKey
      * @return List<EnhancedDocument> list of documents with partition- and sortKey plus entityType
@@ -248,6 +382,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
             map.put("partitionKey", AttributeValue.builder().s(partitionKey).build());
             map.put("sortKey", AttributeValue.builder().s(sortKey).build());
             map.put("entityType", AttributeValue.builder().s("ARTICLES").build());
+            map.put("version", AttributeValue.builder().n("0").build());
 
             EnhancedDocument healthyDoc = EnhancedDocument.fromAttributeValueMap(map);
             healthyList.add(healthyDoc);

@@ -24,13 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class CreateNewArticleHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CreateNewArticleHandler.class);
+public class BatchWriteArticlesHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BatchWriteArticlesHandler.class);
     private static final int MAX_BATCH_SIZE = 25;
 
     private final CreateNewArticleService articleService;
 
-    public CreateNewArticleHandler() {
+    public BatchWriteArticlesHandler() {
         super();
         articleService = new CreateNewArticleService(createArticleRepository());
     }

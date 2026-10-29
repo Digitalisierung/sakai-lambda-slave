@@ -14,6 +14,8 @@ public class ExceptionHandler {
         return switch (e) {
             case NotFoundException notFoundException ->
                     ResponseUtil.createErrorResponse(HttpStatusCode.NOT_FOUND, notFoundException.getMessage());
+            case FailedValidationException failedValidationException ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, failedValidationException.getMessage());
             case software.amazon.awssdk.thirdparty.jackson.core.JsonParseException jsonParseException ->
                     ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonParseException.getMessage());
             case com.fasterxml.jackson.core.JsonParseException jsonParseExcept ->
@@ -22,6 +24,10 @@ public class ExceptionHandler {
                     ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessException.getMessage());
             case com.fasterxml.jackson.core.JsonProcessingException jsonProcessingException ->
                     ResponseUtil.createErrorResponse(HttpStatusCode.BAD_REQUEST, jsonProcessingException.getMessage());
+            case software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException ccfe ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.NOT_FOUND, ccfe.getMessage());
+            case software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException rnfe ->
+                    ResponseUtil.createErrorResponse(HttpStatusCode.NOT_FOUND, rnfe.getMessage());
             default -> ResponseUtil.createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR, e.getMessage());
         };
     }
