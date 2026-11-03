@@ -64,4 +64,12 @@ public interface ArticleRepository<T> {
      * @return updated document.
      */
     Map<String, Object> update(String catalogId, String articleId, Map<String, Object> fields);
+
+    /**
+     * Delete an article by its unique identifier via GSI lookup.
+     * Idempotent: does nothing if the article does not exist.
+     *
+     * @param articleId UUID of the article.
+     */
+    void delete(String articleId);
 }

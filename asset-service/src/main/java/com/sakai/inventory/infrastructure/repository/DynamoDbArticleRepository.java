@@ -180,6 +180,34 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     @Override
+    public void delete(String articleId) {
+        LOGGER.debug("Deleting article by id='{}' via GSI_entityType.", articleId);
+
+        String sortKey = "ITEM#" + articleId;
+        QueryConditional queryConditional = QueryConditional.keyEqualTo(
+                buildArticleKeyForGsiEntityType("ARTICLES", sortKey)
+        );
+
+        SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType")
+                .query(QueryEnhancedRequest.builder().queryConditional(queryConditional).build());
+
+        Optional<EnhancedDocument> found = sdkIterable.stream()
+                .flatMap(page -> page.items().stream())
+                .findFirst();
+
+        if (found.isEmpty()) {
+            LOGGER.info("Article with id='{}' not found – nothing to delete (idempotent).", articleId);
+            return;
+        }
+
+        EnhancedDocument item = found.get();
+        Key key = buildArticleKey(item.getString("partitionKey"), item.getString("sortKey"));
+        EnhancedDocument previouslyPersistedItem = articleTable.deleteItem(key);
+        // TODO: clean up dependent data (timelines, images, etc.) in a future version
+        LOGGER.info("Article with id='{}' deleted.", articleId);
+    }
+
+    @Override
     public Map<String, Object> update(String catalogId, String articleId, Map<String, Object> document) {
         String partitionKey = "ACC#default__CAT#" + catalogId;
         String sortKey = "ITEM#" + articleId;

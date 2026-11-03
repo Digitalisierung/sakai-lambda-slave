@@ -60,6 +60,6 @@ public final class ResponseUtil {
      */
     public static APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
         String body = String.format("{\"message\": \"%s\"}", message);
-        return createApiResponse(statusCode, body, createHeader());
+        return createApiResponse(statusCode, body, createExpandedHeader());
     }
 }

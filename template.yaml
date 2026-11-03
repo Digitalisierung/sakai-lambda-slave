@@ -251,6 +251,31 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource:
                   - !GetAtt InventoryCatalogs.Arn
+  DeleteArticleHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDbDeleteItem
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:DeleteItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt InventoryCatalogs.Arn
+                  - !Sub '${InventoryCatalogs.Arn}/index/*'
 
   #########################################
   # Handlers
@@ -306,6 +331,19 @@ Resources:
           Properties:
             Path: /articles/{id}
             Method: put
+            RestApiId: !Ref InventoryApi
+  DeleteArticleHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: asset-service/
+      Handler: com.sakai.inventory.api.handler.DeleteArticleHandler::handleRequest
+      Role: !GetAtt DeleteArticleHandlerRole.Arn
+      Events:
+        DeleteArticleApi:
+          Type: Api
+          Properties:
+            Path: /articles/{id}
+            Method: delete
             RestApiId: !Ref InventoryApi
   ListCatalogsHandler:
     Type: AWS::Serverless::Function

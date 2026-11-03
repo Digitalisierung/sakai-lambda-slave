@@ -1,13 +1,14 @@
 version: 0.2
 phases:
   install:
-    runtime-version:
+    runtime-versions:
       java: corretto21
   pre_build:
     commands:
       - echo Starting pre-build phase...
       - ls /usr/lib/jvm
-      - export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto.x86_64
+      # export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto.x86_64
+      - export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
       - export PATH=$JAVA_HOME/bin:$PATH
       - java -version
       - mvn -v
@@ -24,8 +25,8 @@ phases:
       - echo verifies JAR, uploads artifact to S3, and stores its location as SSM parameters.
       - ls -l asset-service/target/
       - ls -l catalog-service/target/
-      - jar tf asset-service/target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
-      - jar tf catalog-service/target/catalog-service-lambda.jar | grep ListCatalogsHandler || echo "❌ Klasse nicht gefunden!"
+      # jar tf asset-service/target/asset-service-lambda.jar | grep ListArticlesHandler || echo "❌ Klasse nicht gefunden!"
+      # jar tf catalog-service/target/catalog-service-lambda.jar | grep ListCatalogsHandler || echo "❌ Klasse nicht gefunden!"
       - aws s3 cp asset-service/target/asset-service-lambda.jar s3://${S3_LAMBDA_ART_BUCKET}/asset-service-lambda.jar
       - aws s3 cp catalog-service/target/catalog-service-lambda.jar s3://${S3_LAMBDA_ART_BUCKET}/catalog-service-lambda.jar
       - aws ssm put-parameter --name "/sakai/${STAGE_NAME}/lambda/artifact-bucket-name" --value "${S3_LAMBDA_ART_BUCKET}" --type String --overwrite
