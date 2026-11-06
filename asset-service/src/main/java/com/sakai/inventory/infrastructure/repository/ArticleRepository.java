@@ -1,5 +1,6 @@
 package com.sakai.inventory.infrastructure.repository;
 
+import com.sakai.inventory.api.dto.ArticleDeleteDTO;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -45,6 +46,8 @@ public interface ArticleRepository<T> {
      */
     PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
+    List<Map<String, Object>> bulkFindViaGsi(List<String> deleteIds);
+
     /**
      * Find articles in catalog with pagination support.
      *
@@ -72,4 +75,6 @@ public interface ArticleRepository<T> {
      * @param articleId UUID of the article.
      */
     void delete(String articleId);
+
+    List<String> bulkDeleteArticles(List<ArticleDeleteDTO> deleteItems);
 }
