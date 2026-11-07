@@ -306,6 +306,45 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     @Override
+    public List<Map<String, Object>> batchFindViaGsi(List<String> ids) {
+        return bulkFindViaGsi(ids);
+    }
+
+    @Override
+    public List<String> batchDeleteItems(List<ArticleDeleteDTO> deleteItems) {
+        List<Key> unprocessedDeletes = new ArrayList<>();
+
+        int pageSize = 25;
+        for (int start = 0; start < deleteItems.size(); start += pageSize) {
+            int end = Math.min(start + pageSize, deleteItems.size());
+            List<ArticleDeleteDTO> page = deleteItems.subList(start, end);
+
+            WriteBatch.Builder<EnhancedDocument> writeBatchBuilder = WriteBatch.builder(EnhancedDocument.class)
+                    .mappedTableResource(articleTable);
+
+            for (ArticleDeleteDTO dto : page) {
+                String partitionKey = "ACC#default__CAT#" + dto.catalogId();
+                String sortKey = "ITEM#" + dto.articleId();
+                writeBatchBuilder.addDeleteItem(buildArticleKey(partitionKey, sortKey));
+            }
+
+            BatchWriteResult writeResult = enhancedClient.batchWriteItem(
+                    BatchWriteItemEnhancedRequest.builder()
+                            .writeBatches(writeBatchBuilder.build())
+                            .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                            .build()
+            );
+            unprocessedDeletes.addAll(writeResult.unprocessedDeleteItemsForTable(articleTable));
+        }
+
+        if (!unprocessedDeletes.isEmpty()) {
+            LOGGER.warn("{} unprocessed deletes in batch delete.", unprocessedDeletes.size());
+        }
+
+        return extractPartitionKeyIds(unprocessedDeletes);
+    }
+
+    @Override
     public List<String> bulkDeleteArticles(List<ArticleDeleteDTO> deleteItems) {
         List<Key> unprocessedDeletes = new ArrayList<>();
 

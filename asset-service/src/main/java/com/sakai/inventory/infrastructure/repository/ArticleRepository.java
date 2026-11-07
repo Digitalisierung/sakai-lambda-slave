@@ -48,6 +48,10 @@ public interface ArticleRepository<T> {
 
     List<Map<String, Object>> bulkFindViaGsi(List<String> deleteIds);
 
+    List<Map<String, Object>> batchFindViaGsi(List<String> articleIds);
+
+    List<String> batchDeleteItems(List<ArticleDeleteDTO> deleteItems);
+
     /**
      * Find articles in catalog with pagination support.
      *
