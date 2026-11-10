@@ -1,6 +1,6 @@
 package com.sakai.inventory.infrastructure.repository;
 
-import com.sakai.inventory.infrastructure.factory.DynamoDbFactory;
+import com.sakai.inventory.api.dto.ArticleDeleteDTO;
 import com.sakai.inventory.infrastructure.factory.PaginatedResult;
 import com.sakai.inventory.shared.exception.NotFoundException;
 import org.slf4j.Logger;
@@ -9,7 +9,6 @@ import software.amazon.awssdk.core.pagination.sync.SdkIterable;
 import software.amazon.awssdk.enhanced.dynamodb.*;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnConsumedCapacity;
 
@@ -19,7 +18,6 @@ import java.util.stream.Collectors;
 public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocument> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbArticleRepository.class);
 
-    private final DynamoDbClient dynamoDbClient = DynamoDbFactory.createDynamoDbClient();
     private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<EnhancedDocument> articleTable;
 
@@ -69,6 +67,11 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return unprocessed;
     }
 
+    /**
+     *
+     * @param id equal partitionKey.
+     * @return Optional<EnhancedDocument> matching document or empty.
+     */
     @Override
     public Optional<EnhancedDocument> findById(String id) {
         LOGGER.debug("Finding article by id {}", id);
@@ -85,6 +88,11 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return Optional.ofNullable(document);
     }
 
+    /**
+     *
+     * @param id equal UUID part of sortKey.
+     * @return Optional<EnhancedDocument> matching document or empty.
+     */
     @Override
     public Optional<EnhancedDocument> findByIdViaGsi(String id) {
         LOGGER.debug("Querying single article by id='{}' using GSI_entityType.", id);
@@ -108,6 +116,12 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
                 .findFirst();
     }
 
+    /**
+     *
+     * @param limit             Maximum number of articles to return.
+     * @param exclusiveStartKey DynamoDb pagination token (null for first page).
+     * @return PaginatedResult<EnhancedDocument> articles and pagination token.
+     */
     @Override
     public PaginatedResult<EnhancedDocument> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey) {
         LOGGER.debug("Paginated querying (all) articles using GSI_entityType. Limit {}, start key {}", limit, exclusiveStartKey != null);
@@ -146,6 +160,44 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         return new PaginatedResult<>(replacedList, lastEvaluatedKey);
     }
 
+    @Override
+    public List<Map<String, Object>> bulkFindViaGsi(List<String> deleteIds) {
+        LOGGER.debug("Bulk finding {} articles via GSI_entityType.", deleteIds.size());
+        List<Map<String, Object>> result = new ArrayList<>();
+        String gsiEntityType = "ARTICLES";
+
+        for (String id : deleteIds) {
+            String sortKey = "ITEM#" + id;
+            QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKeyForGsiEntityType(gsiEntityType, sortKey));
+            QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
+                    .queryConditional(queryConditional)
+                    .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                    .build();
+
+            SdkIterable<Page<EnhancedDocument>> sdkIterable = articleTable.index("GSI_entityType")
+                    .query(queryRequest);
+
+            List<Map<String, Object>> first = sdkIterable.stream()
+                    .flatMap(page -> page.items().stream())
+                    .map(this::replaceIdInDocument)
+                    .map(EnhancedDocument::toMap)
+                    .map(this::convertToObjectMap)
+                    .toList();
+
+            result.addAll(first);
+        }
+
+        LOGGER.debug("Found {} articles.", result.size());
+        return result;
+    }
+
+    /**
+     *
+     * @param id                Catalog ID.
+     * @param limit             Maximum number of articles to return.
+     * @param exclusiveStartKey DynamoDb pagination token (null for first page).
+     * @return PaginatedResult<EnhancedDocument> articles and pagination token.
+     */
     @Override
     public PaginatedResult<EnhancedDocument> findCatalogArticles(final String id, final int limit, final Map<String, AttributeValue> exclusiveStartKey) {
         LOGGER.debug("Paginated querying articles for catalog id '{}'. Limit {}, start key {}", id, limit, exclusiveStartKey != null);
@@ -207,6 +259,13 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         LOGGER.info("Article with id='{}' deleted.", articleId);
     }
 
+    /**
+     *
+     * @param catalogId catalog the article belongs to.
+     * @param articleId UUID of the article (sortKey without prefix).
+     * @param document  map of fields to update (only mutable fields).
+     * @return Map<String, Object> updated article.
+     */
     @Override
     public Map<String, Object> update(String catalogId, String articleId, Map<String, Object> document) {
         String partitionKey = "ACC#default__CAT#" + catalogId;
@@ -246,6 +305,54 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
         EnhancedDocument responseDocument = response.attributes();
         EnhancedDocument finalDocument = replaceIdInDocument(responseDocument);
         return convertDocumentToObjectMap(finalDocument);
+    }
+
+    @Override
+    public List<String> bulkDeleteArticles(List<ArticleDeleteDTO> deleteItems) {
+        LOGGER.debug("Bulk deleting {} articles.", deleteItems.size());
+        List<Key> unprocessedDeletes = new ArrayList<>();
+
+        int wcu = 0;
+        int pageSize = 25;
+        for (int start = 0; start < deleteItems.size(); start += pageSize) {
+            int end = Math.min(start + pageSize, deleteItems.size());
+            List<ArticleDeleteDTO> page = deleteItems.subList(start, end);
+
+            WriteBatch.Builder<EnhancedDocument> writeBatchBuilder = WriteBatch.builder(EnhancedDocument.class)
+                    .mappedTableResource(articleTable);
+
+            for (ArticleDeleteDTO dto : page) {
+                String partitionKey = "ACC#default__CAT#" + dto.catalogId();
+                String sortKey = "ITEM#" + dto.articleId();
+                Key key = buildArticleKey(partitionKey, sortKey);
+                writeBatchBuilder.addDeleteItem(key);
+            }
+
+            BatchWriteItemEnhancedRequest batchWriteRequest = BatchWriteItemEnhancedRequest.builder()
+                    .writeBatches(writeBatchBuilder.build())
+                    .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
+                    .build();
+
+            BatchWriteResult writeResult = enhancedClient.batchWriteItem(batchWriteRequest);
+            unprocessedDeletes.addAll(writeResult.unprocessedDeleteItemsForTable(articleTable));
+            wcu += writeResult.consumedCapacity().size();
+        }
+
+        if (!unprocessedDeletes.isEmpty()) {
+            LOGGER.info("{} unprocessed deletes in bulk delete.", unprocessedDeletes.size());
+        }
+
+        LOGGER.info("Consumed {} WCU.", wcu);
+        return extractPartitionKeyIds(unprocessedDeletes);
+    }
+
+    private List<String> extractPartitionKeyIds(List<Key> unprocessedDeletes) {
+        return unprocessedDeletes.stream()
+                .map(Key::sortKeyValue)
+                .map(Optional::get)
+                .map(AttributeValue::s)
+                .map(this::extractIdFromSortKey)
+                .toList();
     }
 
     private Map<String, Object> convertDocumentToObjectMap(EnhancedDocument document) {
@@ -332,6 +439,10 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     private EnhancedDocument replaceIdInDocument(EnhancedDocument document) {
+        if (document == null) {
+            return null;
+        }
+
         String sortKey = document.getString("sortKey");
         String sk = extractIdFromSortKey(sortKey);
 
