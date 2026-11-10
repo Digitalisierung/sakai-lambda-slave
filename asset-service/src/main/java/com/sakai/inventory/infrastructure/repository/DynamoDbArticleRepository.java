@@ -161,11 +161,12 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
     }
 
     @Override
-    public List<Map<String, Object>> bulkFindViaGsi(List<String> ids) {
+    public List<Map<String, Object>> bulkFindViaGsi(List<String> deleteIds) {
+        LOGGER.debug("Bulk finding {} articles via GSI_entityType.", deleteIds.size());
         List<Map<String, Object>> result = new ArrayList<>();
         String gsiEntityType = "ARTICLES";
 
-        for (String id : ids) {
+        for (String id : deleteIds) {
             String sortKey = "ITEM#" + id;
             QueryConditional queryConditional = QueryConditional.keyEqualTo(buildArticleKeyForGsiEntityType(gsiEntityType, sortKey));
             QueryEnhancedRequest queryRequest = QueryEnhancedRequest.builder()
@@ -186,6 +187,7 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
             result.addAll(first);
         }
 
+        LOGGER.debug("Found {} articles.", result.size());
         return result;
     }
 
@@ -307,8 +309,10 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
 
     @Override
     public List<String> bulkDeleteArticles(List<ArticleDeleteDTO> deleteItems) {
+        LOGGER.debug("Bulk deleting {} articles.", deleteItems.size());
         List<Key> unprocessedDeletes = new ArrayList<>();
 
+        int wcu = 0;
         int pageSize = 25;
         for (int start = 0; start < deleteItems.size(); start += pageSize) {
             int end = Math.min(start + pageSize, deleteItems.size());
@@ -327,17 +331,18 @@ public class DynamoDbArticleRepository implements ArticleRepository<EnhancedDocu
             BatchWriteItemEnhancedRequest batchWriteRequest = BatchWriteItemEnhancedRequest.builder()
                     .writeBatches(writeBatchBuilder.build())
                     .returnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
-                    .returnItemCollectionMetrics("")
                     .build();
 
             BatchWriteResult writeResult = enhancedClient.batchWriteItem(batchWriteRequest);
             unprocessedDeletes.addAll(writeResult.unprocessedDeleteItemsForTable(articleTable));
+            wcu += writeResult.consumedCapacity().size();
         }
 
         if (!unprocessedDeletes.isEmpty()) {
-            LOGGER.warn("{} unprocessed deletes in bulk delete.", unprocessedDeletes.size());
+            LOGGER.info("{} unprocessed deletes in bulk delete.", unprocessedDeletes.size());
         }
 
+        LOGGER.info("Consumed {} WCU.", wcu);
         return extractPartitionKeyIds(unprocessedDeletes);
     }
 

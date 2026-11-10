@@ -46,6 +46,12 @@ public interface ArticleRepository<T> {
      */
     PaginatedResult<T> findAll(int limit, Map<String, AttributeValue> exclusiveStartKey);
 
+    /**
+     * Bulk lookup of articles using GSI and sortKeys from list of IDs.
+     *
+     * @param deleteIds list of article IDs (UUID part of sortKey).
+     * @return List of found articles as Maps.
+     */
     List<Map<String, Object>> bulkFindViaGsi(List<String> deleteIds);
 
     /**
@@ -76,5 +82,11 @@ public interface ArticleRepository<T> {
      */
     void delete(String articleId);
 
+    /**
+     * Deletes multiple articles identified by their article and catalog identifiers.
+     *
+     * @param deleteItems list of article deletion requests containing the article ID and catalog ID for each article to delete
+     * @return list of article IDs that could not be deleted or remained unprocessed
+     */
     List<String> bulkDeleteArticles(List<ArticleDeleteDTO> deleteItems);
 }

@@ -1,6 +1,8 @@
 package com.sakai.inventory.domain.service;
 
 import com.sakai.inventory.api.dto.ArticleDeleteDTO;
+import com.sakai.inventory.api.dto.BulkDeleteRequestDTO;
+import com.sakai.inventory.api.dto.BulkDeleteResponseDTO;
 import com.sakai.inventory.infrastructure.repository.ArticleRepository;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
@@ -18,8 +20,8 @@ public class BulkDeleteArticlesService {
         this.articleRepository = articleRepository;
     }
 
-    public List<String> bulkDeleteArticles(List<String> deleteIds) {
-        List<Map<String, Object>> foundItems = articleRepository.bulkFindViaGsi(deleteIds);
+    public BulkDeleteResponseDTO bulkDeleteArticles(BulkDeleteRequestDTO deleteIds) {
+        List<Map<String, Object>> foundItems = articleRepository.bulkFindViaGsi(deleteIds.articleIds());
 
         // Artikel seinem Katalog zuweisen (catalogId Ermittlung).
         List<ArticleDeleteDTO> toDelete = foundItems.stream()
@@ -35,12 +37,12 @@ public class BulkDeleteArticlesService {
                 .map(map -> (String) map.get("id"))
                 .collect(Collectors.toSet());
 
-        List<String> notFound = deleteIds.stream()
+        List<String> notFound = deleteIds.articleIds().stream()
                 .filter(id -> !foundIds.contains(id))
                 .toList();
 
         // DB unprocessed + nicht gefundene Ids (Artikel).
         unprocessed.addAll(notFound);
-        return unprocessed;
+        return new BulkDeleteResponseDTO(unprocessed);
     }
 }
